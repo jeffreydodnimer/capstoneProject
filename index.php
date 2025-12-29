@@ -63,12 +63,25 @@
       border-radius: 30px;
       text-decoration: none;
       color: white;
-      background: linear-gradient(135deg, #007BFF, #0056b3);
       transition: background 0.3s ease-in-out;
     }
 
-    .role-buttons a:hover {
+    /* Admin Button - Blue */
+    .role-buttons a.admin-btn {
+      background: linear-gradient(135deg, #007BFF, #0056b3);
+    }
+
+    .role-buttons a.admin-btn:hover {
       background: linear-gradient(135deg, #0056b3, #003d80);
+    }
+
+    /* Faculty Button - Red */
+    .role-buttons a.faculty-btn {
+      background: linear-gradient(135deg, #DC143C, #B22222);
+    }
+
+    .role-buttons a.faculty-btn:hover {
+      background: linear-gradient(135deg, #B22222, #8B0000);
     }
 
     .object-fit-cover {
@@ -120,8 +133,8 @@
           <h1>Hi, Isidorian!</h1>
           <p>↓ Please click or tap your destination.</p>
           <div class="role-buttons">
-            <a href="admin_login.php">Admin</a>
-            <a href="faculty_login.php">Faculty</a>
+            <a href="admin_login.php" class="admin-btn">Admin</a>
+            <a href="faculty_login.php" class="faculty-btn">Faculty</a>
           </div>
 
           <div class="terms">

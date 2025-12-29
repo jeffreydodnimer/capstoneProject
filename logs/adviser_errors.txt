@@ -5,3 +5,4 @@
 2025-12-02T18:38:40+01:00 Delete Adviser Error: Cannot delete adviser. They are assigned to 1 section(s). Please reassign or delete sections first.
 2025-12-22T17:03:58+01:00 CSV Import Fatal Error: Duplicate entry '98765' for key 'PRIMARY'
 2025-12-22T17:04:48+01:00 CSV Import Fatal Error: Duplicate entry '54321' for key 'PRIMARY'
+2025-12-27T09:48:16+01:00 Edit Adviser Error: Photo size too large. Max 2MB.

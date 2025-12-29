@@ -11,7 +11,6 @@ if (isset($_SESSION['faculty_logged_in']) && $_SESSION['faculty_logged_in'] === 
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // --- FIX IS HERE: Use '??' to prevent "Undefined array key" error ---
     $employee_id = trim($_POST['employee_id'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -46,7 +45,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $status = $user['status'] ?? 'active'; 
 
                 if ($status === 'inactive') {
-                    $error = "Your account is currently inactive. Please contact the administrator.";
+                    echo "<script>
+                        alert('Your account is currently inactive. Please contact the administrator.');
+                        window.location.href='faculty_login.php';
+                    </script>";
+                    exit();
                 } 
                 // Verify Password (Plain text check based on your database design)
                 elseif ($password === $user['pass']) {
@@ -60,22 +63,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     // Update Last Login Timestamp
                     $update_sql = "UPDATE faculty_login SET last_login = NOW() WHERE employee_id = ?";
-                    $update_stmt = $conn->prepare($update_sql);
-                    $update_stmt->bind_param("s", $user['employee_id']);
-                    $update_stmt->execute();
-                    $update_stmt->close();
+                    if ($update_stmt = $conn->prepare($update_sql)) {
+                        $update_stmt->bind_param("s", $user['employee_id']);
+                        $update_stmt->execute();
+                        $update_stmt->close();
+                    }
 
-                    header("Location: faculty_dashboard.php");
+                    echo "<script>
+                        alert('Login Successful!');
+                        window.location.href = 'faculty_dashboard.php';
+                    </script>";
                     exit();
                 } else {
-                    $error = "Invalid Password.";
+                    echo "<script>
+                        alert('Access Denied! Employee ID or Password incorrect.');
+                        window.location.href='faculty_login.php';
+                    </script>";
+                    exit();
                 }
             } else {
-                $error = "Employee ID not found.";
+                echo "<script>
+                    alert('Access Denied! Employee ID or Password incorrect.');
+                    window.location.href='faculty_login.php';
+                </script>";
+                exit();
             }
             $stmt->close();
         } else {
-            $error = "Database error. Please try again later.";
+            echo "<script>
+                alert('Database error. Please try again later.');
+                window.location.href='faculty_login.php';
+            </script>";
+            exit();
         }
     }
 }
@@ -85,151 +104,118 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Faculty Login</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" />
 
   <style>
     body {
       margin: 0;
-      font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f8f9fc;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     .login-box {
-      padding: 40px 30px;
+      padding: 50px 40px;
+      max-width: 420px;
+      height: auto; 
+      min-height: 80%;
       width: 100%;
-      max-width: 400px;
-      background-color: #ffffff;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-      position: relative;
-      z-index: 2;
+      background-color: rgb(191, 212, 233);
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .login-box:hover {
+      transform: scale(1.02);
     }
 
     .login-box img.logo {
-      width: 100px;
-      height: 100px;
+      width: 120px;
+      height: 120px;
+      margin-top: 30px;
       margin-bottom: 20px;
       border-radius: 50%;
       object-fit: cover;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
-    .form-control {
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 0.95rem;
-    }
-
-    .btn-login {
-      padding: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-      border: none;
-      transition: all 0.3s ease;
-    }
-
-    .btn-login:hover {
-      background: linear-gradient(135deg, #224abe 0%, #4e73df 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(78, 115, 223, 0.4);
-    }
-
-    .img-side {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .img-side img {
-      position: absolute;
-      top: 0;
-      left: 0;
+    form input[type="text"],
+    form input[type="password"] {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
-    
-    .overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.3);
+
+    form input[type="submit"],
+    form button[type="submit"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 30px;
+      background: linear-gradient(135deg, #DC143C, #B22222);
+      color: white;
+      border: none;
+      transition: background 0.3s ease-in-out;
+    }
+
+    form input[type="submit"]:hover,
+    form button[type="submit"]:hover {
+      background: linear-gradient(135deg, #B22222, #8B0000);
+    }
+
+    .object-fit-cover {
+      object-fit: cover;
     }
 
     @media (max-width: 767px) {
       .img-side {
         display: none;
       }
-      .login-container {
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8f9fc;
+
+      .login-box {
+        padding: 30px 20px;
+        border-radius: 10px;
       }
     }
   </style>
 </head>
 
 <body>
-  
   <div class="container-fluid vh-100">
     <div class="row h-100">
-      
-      <!-- Image Side (Hidden on Mobile) -->
-      <div class="col-md-7 col-lg-8 p-0 img-side">
-        <!-- Update the src below to your actual background image -->
-        <img src="img/school_bg.jpg" alt="School Background" onerror="this.src='https://source.unsplash.com/1600x900/?school,library'" />
-        <div class="overlay"></div>
+      <!-- Left: Image -->
+      <div class="col-md-8 p-0 img-side">
+        <img src="img/pic1.jpg" alt="Visual" class="img-fluid vh-100 w-100 object-fit-cover" />
       </div>
 
-      <!-- Login Form Side -->
-      <div class="col-md-5 col-lg-4 d-flex justify-content-center align-items-center bg-light login-container">
+      <!-- Right: Faculty Login -->
+      <div class="col-md-4 d-flex justify-content-center align-items-center bg-light">
         <div class="login-box text-center">
-          <!-- Update logo src -->
-          <img src="img/depedlogo.jpg" alt="Logo" class="logo" onerror="this.style.display='none'"/>
+          <img src="img/logo.jpg" alt="Logo" class="logo" />
+          <h2 style="font-size: 25px; font-weight: 600; margin-bottom: 30px;">Faculty Login</h2>
           
-          <h3 class="text-gray-900 mb-4 font-weight-bold">Faculty Login</h3>
-          
-          <?php if (!empty($error)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert" style="font-size: 0.9rem;">
-                <i class="fas fa-exclamation-circle me-1"></i> <?php echo $error; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          <?php endif; ?>
-
-          <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-            <div class="mb-3 text-start">
-                <label for="employee_id" class="form-label small text-muted font-weight-bold">Employee ID</label>
-                <!-- IMPORTANT: The name attribute here must match $_POST['employee_id'] -->
-                <input type="text" name="employee_id" id="employee_id" class="form-control" placeholder="Enter your ID" required autofocus />
-            </div>
+          <form action="" method="POST">
+            <input type="text" name="employee_id" class="form-control mb-3" placeholder="Enter Employee ID" required />
+            <input type="password" name="password" class="form-control mb-2" placeholder="Enter Password" required />
+            <br>
             
-            <div class="mb-4 text-start">
-                <label for="password" class="form-label small text-muted font-weight-bold">Password</label>
-                <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required />
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100 btn-login text-white mb-3">
-                Login
-            </button>
+            <!-- Login Button -->
+            <button type="submit" name="login" class="btn w-100">Login</button>
             
-            <hr>
-            <div class="text-center">
-                <a class="small text-decoration-none" href="forgot_password.php">Forgot Password?</a>
-            </div>
+            <!-- Separator Line -->
+            <hr class="my-4">
+            
+            <!-- Forgot Password Link -->
+            <a href="index.php" class="text-decoration-none">Back</a>
+            
           </form>
         </div>
       </div>
     </div>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

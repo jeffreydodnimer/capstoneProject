@@ -24,7 +24,7 @@ if (isset($_POST['login'])) {
                 alert('Login Successful!');
                 window.location.href = '" . ($user['role'] === 'admin' ? 'admin_dashboard.php' : 'faculty_dashboard.php') . "';
             </script>";
-            exit(); // ✅ THIS STOPS THE PAGE FROM CONTINUING
+            exit(); 
         }
     }
 
@@ -33,9 +33,8 @@ if (isset($_POST['login'])) {
         alert('Access Denied! Email or Password incorrect.');
         window.location.href='admin_login.php';
     </script>";
-    exit(); // ✅ Also stop here
+    exit(); 
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -54,7 +53,8 @@ if (isset($_POST['login'])) {
     .login-box {
       padding: 50px 40px;
       max-width: 420px;
-      height: 95%;
+      height: auto; 
+      min-height: 80%;
       width: 100%;
       background-color: rgb(191, 212, 233);
       border-radius: 20px;
@@ -132,11 +132,21 @@ if (isset($_POST['login'])) {
         <div class="login-box text-center">
           <img src="img/logo.jpg" alt="Logo" class="logo" />
           <h2 style="font-size: 25px; font-weight: 600; margin-bottom: 30px;">Admin Login </h2>
+          
           <form action="" method="POST">
             <input type="text" name="email" class="form-control mb-3" placeholder="Enter Email" required />
             <input type="password" name="password" class="form-control mb-2" placeholder="Enter Password" required />
             <br>
-            <button href="index.php" type="submit" name="login" class="btn btn-primary w-100">Login</button>
+            
+            <!-- Login Button -->
+            <button type="submit" name="login" class="btn btn-primary w-100">Login</button>
+            
+            <!-- Separator Line -->
+            <hr class="my-4">
+            
+            <!-- Back Link (Styled like "Forgot Password?") -->
+            <a href="index.php" class="text-decoration-none">Back</a>
+            
           </form>
         </div>
       </div>

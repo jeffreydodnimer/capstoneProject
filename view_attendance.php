@@ -80,19 +80,35 @@ $stmt_update_absent->execute([
     'afternoon_end' => $afternoon_end_time_limit
 ]);
 
-// Fetch Attendance Records with additional joins for grade level, section, and adviser
+
+// --- CORRECTED QUERY BLOCK ---
+// The original query caused a "Column not found" error for 'e.section_id'.
+// The fix involves correcting three joins:
+// 1. Join `attendance` to `enrollments` using `lrn` (not `enrollment_id`).
+// 2. Join `enrollments` to `sections` using `grade_level` and `section_name` (not `section_id`).
+// 3. Join `sections` to `advisers` using `employee_id` (based on your other files).
 $attendanceRecords = [];
-$stmt = $pdo->query("
-    SELECT a.*, s.firstname, s.lastname, e.grade_level, sec.section_name, 
-           CONCAT_WS(' ', adv.firstname, adv.lastname) AS adviser_name
+$stmt = $pdo->prepare("
+    SELECT 
+        a.date,
+        a.time_in,
+        a.time_out,
+        a.status,
+        s.firstname, 
+        s.lastname, 
+        e.grade_level, 
+        e.section_name,
+        CONCAT_WS(' ', adv.firstname, adv.lastname) AS adviser_name
     FROM attendance a 
     INNER JOIN students s ON a.lrn = s.lrn 
-    INNER JOIN enrollments e ON a.enrollment_id = e.enrollment_id
-    LEFT JOIN sections sec ON e.section_id = sec.section_id
-    LEFT JOIN advisers adv ON sec.adviser_id = adv.adviser_id
+    INNER JOIN enrollments e ON a.lrn = e.lrn
+    LEFT JOIN sections sec ON e.grade_level = sec.grade_level AND e.section_name = sec.section_name
+    LEFT JOIN advisers adv ON sec.employee_id = adv.employee_id
     ORDER BY a.date DESC, a.time_in DESC
 ");
+$stmt->execute();
 $attendanceRecords = $stmt->fetchAll();
+
 
 // --- Process records to determine display status (for current day pending records) ---
 foreach ($attendanceRecords as &$record) {
@@ -122,6 +138,8 @@ foreach ($attendanceRecords as &$record) {
 }
 unset($record); // Break the reference with the last element
 
+// Convert records to JSON for JavaScript search
+$jsonRecords = json_encode($attendanceRecords);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -159,6 +177,40 @@ unset($record); // Break the reference with the last element
             color: #333;
             margin-bottom: 20px;
         }
+        
+        /* Search Bar Styles */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .search-box {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 50px 12px 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+        .search-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
         .table-container {
             overflow-x: auto;
             margin-bottom: 20px;
@@ -167,27 +219,33 @@ unset($record); // Break the reference with the last element
             width: 100%;
             border-collapse: collapse;
             font-size: 1rem;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         th, td {
             padding: 12px;
             text-align: left;
-            border: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
         }
         th {
-            background-color: #f1f1f1;
-            font-weight: bold;
+            background-color: #f8f9fa;
+            font-weight: 600;
             text-transform: uppercase;
+            font-size: 0.9rem;
+            color: #495057;
         }
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: #f8f9fa;
         }
         tr:hover {
             background-color: #e2f2ff;
         }
-        .status-present { color: #28a745; }
-        .status-absent { color: #dc3545; }
-        .status-late { color: #ffc107; }
-        .status-halfday { color: #3b82f6; } /* Added style for 'halfday' */
+        .status-present { color: #28a745; font-weight: bold; }
+        .status-absent { color: #dc3545; font-weight: bold; }
+        .status-late { color: #ffc107; font-weight: bold; }
+        .status-halfday { color: #3b82f6; font-weight: bold; }
         .back-link-container {
             text-align: center;
             margin-bottom: 20px;
@@ -209,22 +267,61 @@ unset($record); // Break the reference with the last element
             margin-bottom: 20px;
             font-size: 1rem;
             color: #555;
+            background-color: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 0 auto;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .search-box {
+                max-width: 100%;
+            }
+            th, td {
+                padding: 8px 4px;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1><i class="fas fa-clipboard-list"></i> Attendance Records</h1>
-        <div class="record-count">
+        
+        <!-- Search Section -->
+        <div class="search-container">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-input" 
+                    placeholder="Search students, sections, advisers..."
+                    autocomplete="off"
+                >
+                <i class="fas fa-search search-icon"></i>
+            </div>
+        </div>
+
+        <div class="record-count" id="recordCount">
             <strong>Total Records: <?= count($attendanceRecords) ?></strong>
         </div>
+        
         <div class="back-link-container">
             <a href="admin_dashboard.php" class="back-link">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
+        
         <div class="table-container">
-            <table>
+            <table id="attendanceTable">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -240,29 +337,173 @@ unset($record); // Break the reference with the last element
                 <tbody>
                     <?php if (empty($attendanceRecords)): ?>
                         <tr>
-                            <td colspan="8" style="text-align: center; padding: 20px;">
+                            <td colspan="8" class="no-results">
                                 No attendance records found.
                             </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($attendanceRecords as $record): ?>
                             <tr>
-                                <td><?= htmlspecialchars(date('M j, Y', strtotime($record['date']))) ?></td>
-                                <td><?= htmlspecialchars($record['firstname'] . ' ' . $record['lastname']) ?></td>
-                                <td><?= htmlspecialchars($record['grade_level'] ?? 'N/A') ?></td>
-                                <td><?= htmlspecialchars($record['section_name'] ?? 'N/A') ?></td>
-                                <td><?= htmlspecialchars($record['adviser_name'] ?? 'N/A') ?></td>
-                                <td><?= $record['time_in'] ? date('g:i A', strtotime($record['time_in'])) : 'N/A' ?></td>
-                                <td><?= $record['time_out'] ? date('g:i A', strtotime($record['time_out'])) : 'N/A' ?></td>
-                                <td class="status-<?= strtolower($record['display_status']) ?>">
-                                    <?= ucfirst($record['display_status']) ?>
+                                <td data-date="<?= htmlspecialchars($record['date']) ?>">
+                                    <?= htmlspecialchars(date('M j, Y', strtotime($record['date']))) ?>
+                                </td>
+                                <td data-student="<?= htmlspecialchars(strtolower($record['firstname'] . ' ' . $record['lastname'])) ?>">
+                                    <?= htmlspecialchars($record['firstname'] . ' ' . $record['lastname']) ?>
+                                </td>
+                                <td data-grade="<?= htmlspecialchars(strtolower($record['grade_level'] ?? '')) ?>">
+                                    <?= htmlspecialchars($record['grade_level'] ?? 'N/A') ?>
+                                </td>
+                                <td data-section="<?= htmlspecialchars(strtolower($record['section_name'] ?? '')) ?>">
+                                    <?= htmlspecialchars($record['section_name'] ?? 'N/A') ?>
+                                </td>
+                                <td data-adviser="<?= htmlspecialchars(strtolower($record['adviser_name'] ?? '')) ?>">
+                                    <?= htmlspecialchars($record['adviser_name'] ?? 'N/A') ?>
+                                </td>
+                                <td data-timein="<?= htmlspecialchars($record['time_in']) ?>">
+                                    <?= $record['time_in'] ? date('g:i A', strtotime($record['time_in'])) : 'N/A' ?>
+                                </td>
+                                <td data-timeout="<?= htmlspecialchars($record['time_out']) ?>">
+                                    <?= $record['time_out'] ? date('g:i A', strtotime($record['time_out'])) : 'N/A' ?>
+                                </td>
+                                <td data-status="<?= htmlspecialchars(strtolower($record['display_status'])) ?>" 
+                                    class="status-<?= strtolower($record['display_status']) ?>">
+                                    <?= htmlspecialchars(ucfirst($record['display_status'])) ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
+            <div id="noResults" class="no-results" style="display: none;">
+                <i class="fas fa-search"></i><br>
+                No records found matching your search criteria.
+            </div>
         </div>
     </div>
+
+    <script>
+        // Store all records for searching
+        const allRecords = <?= $jsonRecords ?>;
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.querySelector('#attendanceTable tbody');
+        const recordCount = document.getElementById('recordCount');
+        const noResults = document.getElementById('noResults');
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+        }
+
+        function normalizeStatus(status) {
+            return (status || '').toLowerCase();
+        }
+
+        function clearTable() {
+            tableBody.innerHTML = '';
+        }
+
+        function displayRecords(records) {
+            clearTable();
+            
+            if (records.length === 0) {
+                noResults.style.display = 'block';
+                document.querySelector('.table-container table').style.display = 'none';
+            } else {
+                noResults.style.display = 'none';
+                document.querySelector('.table-container table').style.display = 'table';
+                
+                records.forEach(record => {
+                    const row = document.createElement('tr');
+                    
+                    const displayTimeIn = record.time_in ? 
+                        new Date('1970-01-01T' + record.time_in + 'Z').toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }) : 'N/A';
+                    
+                    const displayTimeOut = record.time_out ? 
+                        new Date('1970-01-01T' + record.time_out + 'Z').toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }) : 'N/A';
+
+                    row.innerHTML = `
+                        <td data-date="${record.date}">
+                            ${formatDate(record.date)}
+                        </td>
+                        <td data-student="${(record.firstname + ' ' + record.lastname).toLowerCase()}">
+                            ${record.firstname} ${record.lastname}
+                        </td>
+                        <td data-grade="${(record.grade_level || '').toLowerCase()}">
+                            ${record.grade_level || 'N/A'}
+                        </td>
+                        <td data-section="${(record.section_name || '').toLowerCase()}">
+                            ${record.section_name || 'N/A'}
+                        </td>
+                        <td data-adviser="${(record.adviser_name || '').toLowerCase()}">
+                            ${record.adviser_name || 'N/A'}
+                        </td>
+                        <td data-timein="${record.time_in}">
+                            ${displayTimeIn}
+                        </td>
+                        <td data-timeout="${record.time_out}">
+                            ${displayTimeOut}
+                        </td>
+                        <td data-status="${normalizeStatus(record.display_status)}" 
+                            class="status-${normalizeStatus(record.display_status)}">
+                            ${record.display_status ? record.display_status.charAt(0).toUpperCase() + record.display_status.slice(1) : 'N/A'}
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            // Update record count
+            recordCount.innerHTML = `<strong>Total Records: ${records.length}</strong>`;
+        }
+
+        function filterRecords() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            // If search bar is empty, show all records
+            if (!searchTerm) {
+                displayRecords(allRecords);
+                return;
+            }
+            
+            const filteredRecords = allRecords.filter(record => {
+                return (record.firstname + ' ' + record.lastname).toLowerCase().includes(searchTerm) ||
+                       (record.grade_level || '').toLowerCase().includes(searchTerm) ||
+                       (record.section_name || '').toLowerCase().includes(searchTerm) ||
+                       (record.adviser_name || '').toLowerCase().includes(searchTerm) ||
+                       (record.date || '').toLowerCase().includes(searchTerm) ||
+                       (record.display_status || '').toLowerCase().includes(searchTerm);
+            });
+            
+            displayRecords(filteredRecords);
+        }
+
+        // Event listener for search input
+        searchInput.addEventListener('input', filterRecords);
+
+        // Allow ESC key to clear search
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                displayRecords(allRecords);
+                searchInput.blur();
+            }
+        });
+
+        // Display all records initially
+        displayRecords(allRecords);
+    </script>
 </body>
 </html>

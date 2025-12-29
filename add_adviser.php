@@ -15,9 +15,17 @@ if (!is_dir('logs')) {
 $adviser_error_log = 'logs/adviser_errors.txt';
 $general_error_log = 'logs/error_log.txt';
 
+// Create uploads directory if needed
+$upload_dir = 'uploads/advisers/';
+// FIX: Changed 'upload_dir' to $upload_dir
+if (!is_dir($upload_dir)) {
+    mkdir($upload_dir, 0755, true);
+}
+
 // --- Database Connection Check ---
 if ($conn->connect_error) {
-    error_log(date('c') . " DB Conn Error: " . $conn->connect_error . "\n", 3, $general_error_log);
+    error_log(date('c') . " DB Conn Error: " . $conn->connect_error . "
+", 3, $general_error_log);
     die("Database connection failed. Please check the logs.");
 }
 $conn->set_charset("utf8");
@@ -29,10 +37,48 @@ if (!isset($_SESSION['csrf_token'])) {
 
 function validate_csrf_token($log_file_path) {
     if (isset($_POST['csrf_token']) && !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
-        error_log(date('c') . " CSRF Attack Detected: " . $_SERVER['REMOTE_ADDR'] . "\n", 3, $log_file_path);
+        error_log(date('c') . " CSRF Attack Detected: " . $_SERVER['REMOTE_ADDR'] . "
+", 3, $log_file_path);
         echo "<script>alert('Invalid security token. Please try again.');location='add_adviser.php'</script>";
         exit();
     }
+}
+
+function upload_adviser_photo($file_input_name, $current_photo = null) {
+    if (!isset($_FILES[$file_input_name]) || $_FILES[$file_input_name]['error'] !== UPLOAD_ERR_OK) {
+        return $current_photo; // Return existing photo if no new file uploaded or error
+    }
+
+    $file_tmp = $_FILES[$file_input_name]['tmp_name'];
+    $file_name = $_FILES[$file_input_name]['name'];
+    $file_size = $_FILES[$file_input_name]['size'];
+    $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+    // Validate Extension
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif'];
+    if (!in_array($file_ext, $allowed_exts)) {
+        throw new Exception("Invalid photo format. Only JPG, PNG, GIF allowed.");
+    }
+
+    // Validate Size (Max 2MB)
+    if ($file_size > 2 * 1024 * 1024) {
+        throw new Exception("Photo size too large. Max 2MB.");
+    }
+
+    // Generate unique name
+    $new_name = 'adv_' . uniqid() . '.' . $file_ext;
+    $destination = 'uploads/advisers/' . $new_name;
+
+    if (!move_uploaded_file($file_tmp, $destination)) {
+        throw new Exception("Failed to upload photo.");
+    }
+
+    // Delete old photo if it exists and is not the default/empty
+    if ($current_photo && file_exists('uploads/advisers/' . $current_photo)) {
+        unlink('uploads/advisers/' . $current_photo);
+    }
+
+    return $new_name;
 }
 
 /*****************
@@ -42,6 +88,7 @@ ADVISER MANAGEMENT
 // --- Handle Add Adviser ---
 if (isset($_POST['add_adviser'])) {
     validate_csrf_token($adviser_error_log);
+    
     $employee_id = htmlspecialchars(trim($_POST['employee_id']), ENT_QUOTES, 'UTF-8');
     $lastname    = htmlspecialchars(trim($_POST['lastname']), ENT_QUOTES, 'UTF-8');
     $firstname   = htmlspecialchars(trim($_POST['firstname']), ENT_QUOTES, 'UTF-8');
@@ -56,9 +103,13 @@ if (isset($_POST['add_adviser'])) {
     }
 
     $plain_pass = $pass;
+    $photo_filename = null;
 
     $conn->begin_transaction();
     try {
+        // Handle Photo Upload
+        $photo_filename = upload_adviser_photo('adviser_photo');
+
         // Check by employee_id (primary key)
         $dup_employee = $conn->prepare("SELECT employee_id FROM advisers WHERE employee_id = ?");
         if (!$dup_employee) {
@@ -72,11 +123,11 @@ if (isset($_POST['add_adviser'])) {
         }
         $dup_employee->close();
 
-        $stmt = $conn->prepare("INSERT INTO advisers (employee_id, lastname, firstname, middlename, suffix, gender, pass) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO advisers (employee_id, lastname, firstname, middlename, suffix, gender, pass, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $conn->error);
         }
-        $stmt->bind_param("sssssss", $employee_id, $lastname, $firstname, $middlename, $suffix, $gender, $plain_pass);
+        $stmt->bind_param("ssssssss", $employee_id, $lastname, $firstname, $middlename, $suffix, $gender, $plain_pass, $photo_filename);
         if (!$stmt->execute()) {
             throw new Exception($stmt->error);
         }
@@ -87,7 +138,8 @@ if (isset($_POST['add_adviser'])) {
         exit();
     } catch (Exception $e) {
         $conn->rollback();
-        error_log(date('c') . " Add Adviser Error: " . $e->getMessage() . "\n", 3, $adviser_error_log);
+        error_log(date('c') . " Add Adviser Error: " . $e->getMessage() . "
+", 3, $adviser_error_log);
         echo "<script>alert('Error adding adviser: " . addslashes($e->getMessage()) . "'); location='add_adviser.php'</script>";
         exit();
     }
@@ -105,6 +157,17 @@ if (isset($_POST['delete_adviser'])) {
 
     $conn->begin_transaction();
     try {
+        // Get photo to delete from filesystem
+        $get_photo = $conn->prepare("SELECT photo FROM advisers WHERE employee_id = ?");
+        $get_photo->bind_param("s", $employee_id);
+        $get_photo->execute();
+        $res = $get_photo->get_result();
+        $photo_to_delete = null;
+        if ($row = $res->fetch_assoc()) {
+            $photo_to_delete = $row['photo'];
+        }
+        $get_photo->close();
+
         // Check sections using employee_id
         $check_sections = $conn->prepare("SELECT COUNT(*) FROM sections WHERE employee_id = ?");
         if (!$check_sections) {
@@ -132,11 +195,18 @@ if (isset($_POST['delete_adviser'])) {
         $stmt->close();
 
         $conn->commit();
+
+        // Delete file from filesystem after DB commit
+        if ($photo_to_delete && file_exists('uploads/advisers/' . $photo_to_delete)) {
+            unlink('uploads/advisers/' . $photo_to_delete);
+        }
+
         header("Location: add_adviser.php?status=deleted");
         exit();
     } catch (Exception $e) {
         $conn->rollback();
-        error_log(date('c') . " Delete Adviser Error: " . $e->getMessage() . "\n", 3, $adviser_error_log);
+        error_log(date('c') . " Delete Adviser Error: " . $e->getMessage() . "
+", 3, $adviser_error_log);
         echo "<script>alert('Delete failed: " . addslashes($e->getMessage()) . "'); location='add_adviser.php'</script>";
         exit();
     }
@@ -161,6 +231,20 @@ if (isset($_POST['edit_adviser'])) {
 
     $conn->begin_transaction();
     try {
+        // Get existing photo
+        $get_photo = $conn->prepare("SELECT photo FROM advisers WHERE employee_id = ?");
+        $get_photo->bind_param("s", $old_employee_id);
+        $get_photo->execute();
+        $res = $get_photo->get_result();
+        $existing_photo = null;
+        if ($row = $res->fetch_assoc()) {
+            $existing_photo = $row['photo'];
+        }
+        $get_photo->close();
+
+        // Handle new photo upload
+        $new_photo = upload_adviser_photo('edit_adviser_photo', $existing_photo);
+
         // Check if new employee_id conflicts (if changed)
         $dup_employee = $conn->prepare("SELECT employee_id FROM advisers WHERE employee_id = ? AND employee_id != ?");
         if (!$dup_employee) {
@@ -174,9 +258,9 @@ if (isset($_POST['edit_adviser'])) {
         }
         $dup_employee->close();
 
-        $sql = "UPDATE advisers SET employee_id = ?, lastname = ?, firstname = ?, middlename = ?, suffix = ?, gender = ?";
-        $param_types = "ssssss";
-        $param_values = [$employee_id, $lastname, $firstname, $middlename, $suffix, $gender];
+        $sql = "UPDATE advisers SET employee_id = ?, lastname = ?, firstname = ?, middlename = ?, suffix = ?, gender = ?, photo = ?";
+        $param_types = "sssssss";
+        $param_values = [$employee_id, $lastname, $firstname, $middlename, $suffix, $gender, $new_photo];
 
         if (!empty($pass_new)) {
             $sql .= ", pass = ?";
@@ -212,7 +296,8 @@ if (isset($_POST['edit_adviser'])) {
         exit();
     } catch (Exception $e) {
         $conn->rollback();
-        error_log(date('c') . " Edit Adviser Error: " . $e->getMessage() . "\n", 3, $adviser_error_log);
+        error_log(date('c') . " Edit Adviser Error: " . $e->getMessage() . "
+", 3, $adviser_error_log);
         echo "<script>alert('Error updating adviser: " . addslashes($e->getMessage()) . "'); location='add_adviser.php'</script>";
         exit();
     }
@@ -300,7 +385,8 @@ if (isset($_POST['import_advisers_csv']) && isset($_FILES['adviser_csvfile']) &&
                 throw new Exception("SQL Error: Could not re-enable foreign key checks: " . $conn->error);
             }
 
-            $stmt = $conn->prepare("INSERT INTO advisers (employee_id, lastname, firstname, middlename, suffix, gender, pass) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            // Include photo in insert (NULL)
+            $stmt = $conn->prepare("INSERT INTO advisers (employee_id, lastname, firstname, middlename, suffix, gender, pass, photo) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)");
             if (!$stmt) {
                 throw new Exception("Database error preparing import statement: " . $conn->error);
             }
@@ -343,16 +429,20 @@ if (isset($_POST['import_advisers_csv']) && isset($_FILES['adviser_csvfile']) &&
                     $rowCount++;
                 } else {
                     $errors[] = "Row $row_num: Insert failed (" . $stmt->error . ").";
-                    error_log(date('c') . " CSV Import Row Error: " . $stmt->error . " for row " . $row_num . "\n", 3, $adviser_error_log);
+                    error_log(date('c') . " CSV Import Row Error: " . $stmt->error . " for row " . $row_num . "
+", 3, $adviser_error_log);
                 }
             }
             fclose($handle);
             $stmt->close();
             $conn->commit();
 
-            $message = "✓ CSV Import Complete!\nSuccessfully imported: $rowCount advisers.";
+            $message = "✓ CSV Import Complete!
+Successfully imported: $rowCount advisers.";
             if (!empty($errors)) {
-                $message .= "\n\n❌ " . count($errors) . " rows failed. Check logs for details.";
+                $message .= "
+
+❌ " . count($errors) . " rows failed. Check logs for details.";
             }
             echo "<script>alert(" . json_encode($message) . "); location='add_adviser.php';</script>";
             exit();
@@ -360,7 +450,8 @@ if (isset($_POST['import_advisers_csv']) && isset($_FILES['adviser_csvfile']) &&
         } catch (Exception $e) {
             $conn->rollback();
             $conn->query("SET FOREIGN_KEY_CHECKS = 1"); 
-            error_log(date('c') . " CSV Import Fatal Error: " . $e->getMessage() . "\n", 3, $adviser_error_log);
+            error_log(date('c') . " CSV Import Fatal Error: " . $e->getMessage() . "
+", 3, $adviser_error_log);
             echo "<script>alert('❌ CSV Import failed: " . addslashes($e->getMessage()) . "'); location='add_adviser.php'</script>";
             exit();
         }
@@ -371,9 +462,10 @@ if (isset($_POST['import_advisers_csv']) && isset($_FILES['adviser_csvfile']) &&
 }
 
 // --- Fetch advisers for display ---
-$advisers_result = $conn->query("SELECT employee_id, lastname, firstname, middlename, suffix, gender, pass FROM advisers ORDER BY lastname, firstname");
+$advisers_result = $conn->query("SELECT employee_id, lastname, firstname, middlename, suffix, gender, pass, photo FROM advisers ORDER BY lastname, firstname");
 if (!$advisers_result) {
-    error_log(date('c') . " Fetch Advisers Error: " . $conn->error . "\n", 3, $general_error_log);
+    error_log(date('c') . " Fetch Advisers Error: " . $conn->error . "
+", 3, $general_error_log);
     die("Error fetching advisers.");
 }
 ?>
@@ -506,6 +598,22 @@ if (!$advisers_result) {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             border-radius: 15px;
         }
+        .adviser-photo-thumb {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+        }
+        .adviser-photo-preview {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            margin-bottom: 10px;
+            background-color: #f3f4f6;
+        }
     </style>
     <script>
     $(document).ready(function(){
@@ -535,7 +643,7 @@ if (!$advisers_result) {
                 }
             });
             if(visibleCount === 0 && searchTerm.length > 0 && $('#noResults').length === 0) {
-                $('.custom-table tbody').append('<tr id="noResults"><td colspan="9" class="border px-3 py-2 text-center text-gray-500 py-8"><span class="material-symbols-outlined" style="font-size:1.5rem;">search_off</span><br>No advisers found matching "' + searchTerm + '"</td></tr>');
+                $('.custom-table tbody').append('<tr id="noResults"><td colspan="10" class="border px-3 py-2 text-center text-gray-500 py-8"><span class="material-symbols-outlined" style="font-size:1.5rem;">search_off</span><br>No advisers found matching "' + searchTerm + '"</td></tr>');
             } else if (searchTerm.length === 0) {
                 $('#noResults').remove();
             }
@@ -552,10 +660,63 @@ if (!$advisers_result) {
         searchInput.on('keydown', function(e) { 
             if(e.key === 'Escape') clearBtn.click(); 
         });
+
+        // Photo Preview in Add Modal
+        $('#addAdviserModal input[name="adviser_photo"]').change(function(e){
+            const file = e.target.files[0];
+            if(file){
+                const reader = new FileReader();
+                reader.onload = function(e){
+                    $('#add_photo_preview').attr('src', e.target.result).show();
+                }
+                reader.readAsDataURL(file);
+            } else {
+                $('#add_photo_preview').hide();
+            }
+        });
+
+        // Photo Preview in Edit Modal
+        $('#editAdviserModal input[name="edit_adviser_photo"]').change(function(e){
+            const file = e.target.files[0];
+            if(file){
+                const reader = new FileReader();
+                reader.onload = function(e){
+                    $('#edit_photo_display').attr('src', e.target.result);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle Status Toast
+        const urlParams = new URLSearchParams(window.location.search);
+        const status = urlParams.get('status');
+        
+        if (status === 'added' || status === 'updated' || status === 'deleted') {
+            const toastEl = document.getElementById('liveToast');
+            const toastBody = document.getElementById('toastMessage');
+            
+            // Capitalize first letter
+            const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+            toastBody.textContent = `Adviser ${formattedStatus} successfully!`;
+            
+            // Set Color based on action
+            toastEl.classList.remove('bg-success', 'bg-danger');
+            if (status === 'deleted') {
+                toastEl.classList.add('bg-danger');
+            } else {
+                toastEl.classList.add('bg-success');
+            }
+            
+            // Initialize and show Toast (Auto-vanishes after 3000ms)
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            toast.show();
+            
+            // Clean URL (remove ?status=...) so refreshing doesn't trigger alert again
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     });
 
-    // Now passes no username (removed)
-    function openEditAdviserModal(employee_id, lastname, firstname, middlename, suffix, gender) {
+    function openEditAdviserModal(employee_id, lastname, firstname, middlename, suffix, gender, photo) {
         const editModal = new bootstrap.Modal(document.getElementById('editAdviserModal'));
         document.getElementById('old_employee_id').value = employee_id;
         document.getElementById('edit_employee_id').value = employee_id;
@@ -565,6 +726,15 @@ if (!$advisers_result) {
         document.getElementById('edit_suffix').value = suffix;
         document.getElementById('edit_gender').value = gender;
         document.getElementById('edit_pass').value = '';
+        
+        // Handle Photo
+        const photoImg = document.getElementById('edit_photo_display');
+        if(photo && photo.trim() !== '') {
+            photoImg.src = 'uploads/advisers/' + photo;
+        } else {
+            photoImg.src = 'https://via.placeholder.com/150?text=No+Photo';
+        }
+
         editModal.show();
     }
     </script>
@@ -599,13 +769,6 @@ if (!$advisers_result) {
                         </div>
                     </div>
 
-                    <?php if (isset($_GET['status'])): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        Adviser <?= htmlspecialchars($_GET['status']) ?> successfully!
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    <?php endif; ?>
-
                     <div class="table-card">
                         <div class="table-responsive-custom">
                             <table class="custom-table">
@@ -613,6 +776,7 @@ if (!$advisers_result) {
                                     <tr>
                                         <th class="border px-3 py-2">#</th>
                                         <th class="border px-3 py-2">Employee ID</th>
+                                        <th class="border px-3 py-2">Photo</th>
                                         <th class="border px-3 py-2">Last Name</th>
                                         <th class="border px-3 py-2">First Name</th>
                                         <th class="border px-3 py-2">Middle Name</th>
@@ -631,6 +795,13 @@ if (!$advisers_result) {
                                     <tr>
                                         <td class="border px-3 py-2 font-medium"><?= $counter++ ?></td>
                                         <td class="border px-3 py-2"><?= htmlspecialchars($row['employee_id']) ?></td>
+                                        <td class="border px-3 py-2">
+                                            <?php if(!empty($row['photo'])): ?>
+                                                <img src="uploads/advisers/<?= htmlspecialchars($row['photo']) ?>" class="adviser-photo-thumb" alt="Adviser Photo">
+                                            <?php else: ?>
+                                                <span class="text-muted text-sm">No Photo</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="border px-3 py-2 font-medium"><?= htmlspecialchars($row['lastname']) ?></td>
                                         <td class="border px-3 py-2"><?= htmlspecialchars($row['firstname']) ?></td>
                                         <td class="border px-3 py-2"><?= htmlspecialchars($row['middlename']) ?></td>
@@ -648,7 +819,8 @@ if (!$advisers_result) {
                                                 '<?= htmlspecialchars($row['firstname'], ENT_QUOTES) ?>',
                                                 '<?= htmlspecialchars($row['middlename'], ENT_QUOTES) ?>',
                                                 '<?= htmlspecialchars($row['suffix'], ENT_QUOTES) ?>',
-                                                '<?= htmlspecialchars($row['gender'], ENT_QUOTES) ?>'
+                                                '<?= htmlspecialchars($row['gender'], ENT_QUOTES) ?>',
+                                                '<?= htmlspecialchars($row['photo'], ENT_QUOTES) ?>'
                                             )" class="action-icon-btn edit-icon" title="Edit Adviser">
                                                 <span class="material-symbols-outlined">edit</span>
                                             </button>
@@ -664,7 +836,7 @@ if (!$advisers_result) {
                                     <?php endwhile; ?>
                                     <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="border px-3 py-12 text-center text-gray-500">
+                                        <td colspan="10" class="border px-3 py-12 text-center text-gray-500">
                                             <span class="material-symbols-outlined" style="font-size:3rem; opacity:0.5;">group_off</span>
                                             <div class="mt-2">No advisers found.</div>
                                         </td>
@@ -683,7 +855,7 @@ if (!$advisers_result) {
     <div class="modal fade" id="addAdviserModal" tabindex="-1" aria-labelledby="addAdviserModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                     <div class="modal-header">
                         <h5 class="modal-title" id="addAdviserModalLabel">
@@ -692,6 +864,16 @@ if (!$advisers_result) {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        <!-- Photo Row - First Row -->
+                        <div class="row mb-3">
+                            <div class="col-12 text-center">
+                                <label class="form-label fw-bold">Adviser Photo</label>
+                                <img id="add_photo_preview" src="" class="adviser-photo-preview d-none mx-auto" alt="Preview">
+                                <input type="file" name="adviser_photo" class="form-control" accept="image/*">
+                                <div class="form-text">Optional. Max 2MB. JPG, PNG, GIF.</div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Employee ID <span class="text-danger">*</span></label>
                             <input type="text" name="employee_id" class="form-control" required>
@@ -745,7 +927,7 @@ if (!$advisers_result) {
     <div class="modal fade" id="editAdviserModal" tabindex="-1" aria-labelledby="editAdviserModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                     <input type="hidden" id="old_employee_id" name="old_employee_id">
                     <div class="modal-header">
@@ -755,6 +937,16 @@ if (!$advisers_result) {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        <!-- Photo Row - First Row -->
+                        <div class="row mb-3">
+                            <div class="col-12 text-center">
+                                <label class="form-label fw-bold">Update Photo</label>
+                                <img id="edit_photo_display" src="" class="adviser-photo-preview mx-auto" alt="Current Photo">
+                                <input type="file" name="edit_adviser_photo" class="form-control" accept="image/*">
+                                <div class="form-text">Leave empty to keep current photo.</div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Employee ID <span class="text-danger">*</span></label>
                             <input type="text" id="edit_employee_id" name="edit_employee_id" class="form-control" required>
@@ -831,5 +1023,18 @@ if (!$advisers_result) {
             </div>
         </div>
     </div>
+
+    <!-- Auto-Vanish Alert Toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+        <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    Action completed successfully.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
+<?php include 'footer.php'; ?>

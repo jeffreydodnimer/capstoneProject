@@ -1079,3 +1079,4 @@ if ($guardians_query) $guardians_query->close();
     </script>
   </body>
 </html>
+<?php include 'footer.php'; ?>

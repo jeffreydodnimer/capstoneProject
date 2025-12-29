@@ -246,69 +246,220 @@ if (isset($_GET['generate_pdf'])) {
         <meta charset="UTF-8">
         <title>Generate Attendance Report (SF2)</title>
         <style>
-            body { font-family: Arial, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 600px; margin: 20px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            h1 { color: #0056b3; margin-bottom: 20px; text-align: center;}
-            .form-group { margin-bottom: 20px; }
-            label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9em; }
-            select, input[type="text"], input[type="month"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; box-sizing: border-box; }
-            input[readonly] { background-color: #e9ecef; }
-            button { padding: 12px 20px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 1em; width: 100%; cursor: pointer; transition: background-color 0.3s; }
-            button:disabled { background-color: #ccc; cursor: not-allowed; }
-            button:not(:disabled):hover { background-color: #0056b3; }
+            /* General Reset and Body Styling */
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            
+            body {
+                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px;
+                color: #333;
+                overflow-y: auto; /* Allow body scroll if screen is very small */
+            }
+
+            /* Container Card Styling */
+            .container {
+                background-color: #ffffff;
+                width: 100%;
+                max-width: 600px;
+                max-height: 90vh; /* Limit height to 90% of viewport */
+                display: flex;
+                flex-direction: column;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                border-top: 6px solid #4e73df; /* Top Accent Color */
+                overflow: hidden; /* Hide overflow of children */
+            }
+
+            /* Header Section - Fixed at top */
+            .header-section {
+                padding: 20px 30px 10px 30px;
+                background-color: #fff;
+                flex-shrink: 0;
+                border-bottom: 1px solid #eee;
+            }
+
+            /* Back Button Styling */
+            .back-btn-container {
+                margin-bottom: 10px;
+            }
+            .back-btn {
+                display: inline-flex;
+                align-items: center;
+                text-decoration: none;
+                color: #4e73df;
+                font-weight: 600;
+                font-size: 0.85rem;
+                padding: 6px 10px;
+                border-radius: 4px;
+                transition: background-color 0.2s;
+            }
+            .back-btn:hover {
+                background-color: #eaecf4;
+                color: #2e59d9;
+            }
+
+            /* Header Styling */
+            h1 {
+                color: #2e384d;
+                margin-bottom: 10px;
+                text-align: center;
+                font-weight: 700;
+                font-size: 1.5rem;
+            }
+
+            /* Scrollable Form Content */
+            .form-content {
+                padding: 20px 30px;
+                overflow-y: auto; /* Scroll inside this div */
+                flex-grow: 1;
+            }
+
+            /* Form Group Styling */
+            .form-group {
+                margin-bottom: 15px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 5px;
+                color: #5a5c69;
+                font-weight: 600;
+                font-size: 0.85em;
+            }
+
+            select, input[type="text"], input[type="month"] {
+                width: 100%;
+                padding: 10px 12px;
+                border: 2px solid #e0e6ed;
+                border-radius: 6px;
+                font-size: 0.95em;
+                transition: all 0.3s ease;
+                background-color: #f8f9fc;
+                color: #2e384d;
+            }
+
+            /* Focus States */
+            select:focus, input:focus {
+                border-color: #4e73df;
+                background-color: #fff;
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.1);
+            }
+
+            input[readonly] {
+                background-color: #eaecf4;
+                cursor: not-allowed;
+                color: #858796;
+            }
+
+            /* Generate Button Container - Fixed at bottom */
+            .button-section {
+                padding: 15px 30px 20px 30px;
+                background-color: #fff;
+                flex-shrink: 0;
+                border-top: 1px solid #eee;
+            }
+
+            /* Generate Button Styling */
+            button {
+                width: 100%;
+                padding: 12px;
+                background-color: #4e73df; /* Primary Blue */
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 1em;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background-color 0.2s;
+                box-shadow: 0 4px 6px rgba(78, 115, 223, 0.2);
+            }
+
+            button:hover {
+                background-color: #2e59d9; /* Darker Blue */
+            }
+
+            button:disabled {
+                background-color: #bdc3c7;
+                cursor: not-allowed;
+                box-shadow: none;
+            }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>Generate SF2 Attendance Report</h1>
-            <form action="" method="get" target="_blank">
-                <div class="form-group">
-                    <label for="school_name">School Name:</label>
-                    <input type="text" name="school_name" id="school_name" value="SAN ISIDRO NATIONAL HIGH SCHOOL" required />
+            <!-- Header Section -->
+            <div class="header-section">
+                <!-- Back Button -->
+                <div class="back-btn-container">
+                    <a href="admin_dashboard.php" class="back-btn">
+                        &larr; Back to Dashboard
+                    </a>
                 </div>
-                <div class="form-group">
-                    <label for="school_id">School ID:</label>
-                    <input type="text" name="school_id" id="school_id" value="301394" required />
-                </div>
-                <div class="form-group">
-                    <label for="school_year">School Year:</label>
-                    <select id="school_year" name="school_year" required>
-                        <option value="">Select School Year</option>
-                        <?php foreach ($school_years as $year): ?>
-                            <option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="grade_level">Grade Level:</label>
-                    <select id="grade_level" name="grade_level" required>
-                        <option value="">Select Grade Level</option>
-                        <?php foreach ($grade_levels as $grade): ?>
-                            <option value="<?= htmlspecialchars($grade) ?>"><?= htmlspecialchars($grade) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="section_id">Section:</label>
-                    <select id="section_id" name="section_id" required disabled>
-                        <option value="">Select School Year & Grade First</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="adviser_name">Adviser:</label>
-                    <input type="text" name="adviser_name" id="adviser_name" readonly required placeholder="Auto-filled upon section selection" />
-                </div>
-                <div class="form-group">
-                    <label for="school_head_name">School Head:</label>
-                    <input type="text" name="school_head_name" id="school_head_name" value="ELENITA BUSA BELARE" required />
-                </div>
-                <div class="form-group">
-                    <label for="month">Report for Month:</label>
-                    <input type="month" id="month" name="month" required />
-                </div>
+                <h1>Generate SF2 Report</h1>
+            </div>
+
+            <!-- Scrollable Form Content -->
+            <div class="form-content">
+                <form action="" method="get" target="_blank">
+                    <div class="form-group">
+                        <label for="school_name">School Name:</label>
+                        <input type="text" name="school_name" id="school_name" value="SAN ISIDRO NATIONAL HIGH SCHOOL" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="school_id">School ID:</label>
+                        <input type="text" name="school_id" id="school_id" value="301394" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="school_year">School Year:</label>
+                        <select id="school_year" name="school_year" required>
+                            <option value="">Select School Year</option>
+                            <?php foreach ($school_years as $year): ?>
+                                <option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="grade_level">Grade Level:</label>
+                        <select id="grade_level" name="grade_level" required>
+                            <option value="">Select Grade Level</option>
+                            <?php foreach ($grade_levels as $grade): ?>
+                                <option value="<?= htmlspecialchars($grade) ?>"><?= htmlspecialchars($grade) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="section_id">Section:</label>
+                        <select id="section_id" name="section_id" required disabled>
+                            <option value="">Select School Year & Grade First</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="adviser_name">Adviser:</label>
+                        <input type="text" name="adviser_name" id="adviser_name" readonly required placeholder="Auto-filled upon section selection" />
+                    </div>
+                    <div class="form-group">
+                        <label for="school_head_name">School Head:</label>
+                        <input type="text" name="school_head_name" id="school_head_name" value="ELENITA BUSA BELARE" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="month">Report for Month:</label>
+                        <input type="month" id="month" name="month" required />
+                    </div>
+                </form>
+            </div>
+
+            <!-- Fixed Button Section -->
+            <div class="button-section">
                 <button type="submit" id="generateBtn" name="generate_pdf" value="1" disabled>Generate PDF</button>
-            </form>
+            </div>
         </div>
+        
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             const schoolYearSelect = document.getElementById('school_year');
@@ -317,6 +468,22 @@ if (isset($_GET['generate_pdf'])) {
             const adviserInput = document.getElementById('adviser_name');
             const monthInput = document.getElementById('month');
             const generateBtn = document.getElementById('generateBtn');
+            // Move button outside form logic or keep it inside. 
+            // Since button is in a different div structure now, we attach event listener to form submit or just let button trigger submit since it's inside a form in the HTML structure above, but I moved form tags.
+            // Actually, looking at HTML above, form tags wrap the inputs but not the button if I split the divs.
+            // Let's fix the HTML structure quickly in the JS logic or just attach click event.
+            // Better approach: Ensure the button is type="submit" and is inside the <form> tag.
+            
+            // Re-structuring the form tag to wrap everything properly:
+            const form = document.querySelector('form');
+            
+            // Let's make sure the button is inside the form by moving it via JS or adjusting HTML.
+            // To be safe, I will attach the click listener to submit the form.
+            
+            generateBtn.onclick = function() {
+                form.submit();
+            };
+
             let sectionsCache = [];
             
             function checkFormCompletion() {

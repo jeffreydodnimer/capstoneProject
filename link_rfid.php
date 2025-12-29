@@ -786,3 +786,4 @@ if (!$students_result) {
     </div>
   </body>
 </html>
+<?php include 'footer.php'; ?>

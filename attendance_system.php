@@ -16,6 +16,7 @@ function getDbConnection($h, $db, $u, $p)
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         return $pdo;
     } catch (PDOException $e) {
+        error_log("Database connection error: " . $e->getMessage());
         return null; // Return null on failure for safe checking
     }
 }
@@ -39,7 +40,7 @@ function sendSMS($studentName, $actionType, $time, $phone)
     }
     
     $parameters = array(
-        'apikey' => 'f10b39b25216155081988863eb8815db', // --- IMPORTANT: ADD YOUR SEMAPHORE API KEY HERE ---
+        'apikey' => '', // your Semaphore API key
         'number' => $phone, 
         'message' => $message,
         'sendername' => 'RNCTLCI'
@@ -66,32 +67,89 @@ function sendSMS($studentName, $actionType, $time, $phone)
 // Get time settings from database (with defaults)
 function getTimeSettings(PDO $pdo)
 {
-    $stmt = $pdo->query("SELECT * FROM time_settings WHERE id = 1");
-    $row = $stmt->fetch();
-    if (!$row) {
-        $stmt = $pdo->query("SELECT * FROM time_settings ORDER BY id ASC LIMIT 1");
+    try {
+        // Ensure the table exists
+        $table_exists = $pdo->query("SHOW TABLES LIKE 'time_settings'");
+        if (!$table_exists->rowCount()) {
+            // Create table if it doesn't exist
+            $pdo->exec("
+                CREATE TABLE `time_settings` (
+                  `id` int(11) NOT NULL,
+                  `morning_start` time NOT NULL,
+                  `morning_end` time NOT NULL,
+                  `morning_late_threshold` time NOT NULL,
+                  `afternoon_start` time NOT NULL,
+                  `afternoon_end` time NOT NULL,
+                  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                  `allow_mon` tinyint(1) NOT NULL DEFAULT 1,
+                  `allow_tue` tinyint(1) NOT NULL DEFAULT 1,
+                  `allow_wed` tinyint(1) NOT NULL DEFAULT 1,
+                  `allow_thu` tinyint(1) NOT NULL DEFAULT 1,
+                  `allow_fri` tinyint(1) NOT NULL DEFAULT 1,
+                  `allow_sat` tinyint(1) NOT NULL DEFAULT 0,
+                  `allow_sun` tinyint(1) NOT NULL DEFAULT 0,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            ");
+            
+            // Insert default values
+            $pdo->exec("
+                INSERT INTO `time_settings` 
+                    (`id`, `morning_start`, `morning_end`, `morning_late_threshold`, 
+                     `afternoon_start`, `afternoon_end`, `updated_at`, 
+                     `allow_mon`, `allow_tue`, `allow_wed`, `allow_thu`, `allow_fri`, `allow_sat`, `allow_sun`) 
+                VALUES
+                    (1, '06:00:00', '09:00:00', '08:30:00', '16:00:00', '16:30:00', NOW(), 1, 1, 1, 1, 1, 0, 0);
+            ");
+        }
+        
+        // Now check if we have data in the table
+        $stmt = $pdo->query("SELECT * FROM time_settings WHERE id = 1");
         $row = $stmt->fetch();
-    }
+        if (!$row) {
+            // If no record exists, insert default record
+            $pdo->exec("
+                INSERT INTO `time_settings` 
+                    (`id`, `morning_start`, `morning_end`, `morning_late_threshold`, 
+                     `afternoon_start`, `afternoon_end`, `updated_at`, 
+                     `allow_mon`, `allow_tue`, `allow_wed`, `allow_thu`, `allow_fri`, `allow_sat`, `allow_sun`) 
+                VALUES
+                    (1, '06:00:00', '09:00:00', '08:30:00', '16:00:00', '16:30:00', NOW(), 1, 1, 1, 1, 1, 0, 0);
+            ");
+            $row = [
+                'morning_start' => '06:00:00',
+                'morning_end' => '09:00:00',
+                'morning_late_threshold' => '08:30:00',
+                'afternoon_start' => '16:00:00',
+                'afternoon_end' => '16:30:00',
+                'allow_mon' => 1,
+                'allow_tue' => 1,
+                'allow_wed' => 1,
+                'allow_thu' => 1,
+                'allow_fri' => 1,
+                'allow_sat' => 0,
+                'allow_sun' => 0
+            ];
+        }
 
-    $default_settings = [
-        'morning_start' => '06:00:00',
-        'morning_end' => '09:00:00',
-        'morning_late_threshold' => '08:30:00',
-        'afternoon_start' => '16:00:00',
-        'afternoon_end' => '16:30:00',
-        'allow_mon' => 1,
-        'allow_tue' => 1,
-        'allow_wed' => 1,
-        'allow_thu' => 1,
-        'allow_fri' => 1,
-        'allow_sat' => 0,
-        'allow_sun' => 0
-    ];
-
-    if ($row) {
-        return array_merge($default_settings, $row);
+        return $row;
+    } catch (Exception $e) {
+        error_log("Error getting time settings: " . $e->getMessage());
+        return [
+            'morning_start' => '06:00:00',
+            'morning_end' => '09:00:00',
+            'morning_late_threshold' => '08:30:00',
+            'afternoon_start' => '16:00:00',
+            'afternoon_end' => '16:30:00',
+            'allow_mon' => 1,
+            'allow_tue' => 1,
+            'allow_wed' => 1,
+            'allow_thu' => 1,
+            'allow_fri' => 1,
+            'allow_sat' => 0,
+            'allow_sun' => 0
+        ];
     }
-    return $default_settings;
 }
 
 // Check if attendance is allowed for the current day based on settings
@@ -125,33 +183,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_status') {
         exit;
     }
 
-    $time_settings = getTimeSettings($pdo);
-    $is_day_allowed = isAttendanceAllowedToday($time_settings);
-    $current_time_str = date('H:i:s');
+    try {
+        $time_settings = getTimeSettings($pdo);
+        $is_day_allowed = isAttendanceAllowedToday($time_settings);
+        $current_time_str = date('H:i:s');
 
-    $is_morning_session = ($current_time_str >= $time_settings['morning_start'] && $current_time_str <= $time_settings['morning_end']);
-    $is_afternoon_session = ($current_time_str >= $time_settings['afternoon_start'] && $current_time_str <= $time_settings['afternoon_end']);
-    $system_active = ($is_morning_session || $is_afternoon_session) && $is_day_allowed;
+        $is_morning_session = ($current_time_str >= $time_settings['morning_start'] && $current_time_str <= $time_settings['morning_end']);
+        $is_afternoon_session = ($current_time_str >= $time_settings['afternoon_start'] && $current_time_str <= $time_settings['afternoon_end']);
+        $system_active = ($is_morning_session || $is_afternoon_session) && $is_day_allowed;
 
-    $response = [
-        'system_active' => $system_active,
-        'is_day_allowed' => $is_day_allowed,
-        'current_day_name' => date('l'),
-        'settings' => [
-            'morningStart' => $time_settings['morning_start'],
-            'morningEnd' => $time_settings['morning_end'],
-            'afternoonStart' => $time_settings['afternoon_start'],
-            'afternoonEnd' => $time_settings['afternoon_end'],
-        ],
-        'display' => [
-            'morning_start_display' => date('h:i A', strtotime($time_settings['morning_start'])),
-            'morning_end_display' => date('h:i A', strtotime($time_settings['morning_end'])),
-            'afternoon_start_display' => date('h:i A', strtotime($time_settings['afternoon_start'])),
-            'afternoon_end_display' => date('h:i A', strtotime($time_settings['afternoon_end'])),
-        ]
-    ];
+        $response = [
+            'system_active' => $system_active,
+            'is_day_allowed' => $is_day_allowed,
+            'current_day_name' => date('l'),
+            'settings' => [
+                'morningStart' => $time_settings['morning_start'],
+                'morningEnd' => $time_settings['morning_end'],
+                'afternoonStart' => $time_settings['afternoon_start'],
+                'afternoonEnd' => $time_settings['afternoon_end'],
+            ],
+            'display' => [
+                'morning_start_display' => date('h:i A', strtotime($time_settings['morning_start'])),
+                'morning_end_display' => date('h:i A', strtotime($time_settings['morning_end'])),
+                'afternoon_start_display' => date('h:i A', strtotime($time_settings['afternoon_start'])),
+                'afternoon_end_display' => date('h:i A', strtotime($time_settings['afternoon_end'])),
+            ]
+        ];
 
-    echo json_encode($response);
+        echo json_encode($response);
+    } catch (Exception $e) {
+        error_log("Status polling error: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Internal server error.']);
+    }
     exit;
 }
 
@@ -159,165 +223,235 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_status') {
 
 $pdo = getDbConnection($host, $db_name, $username, $password);
 if (!$pdo) {
-    die("Database connection failed. Please check your configuration and ensure the database server is running.");
-}
+    // Create error message for display
+    $message = '<div class="alert error">Database connection failed. Please check your configuration and ensure the database server is running.</div>';
+} else {
+    date_default_timezone_set('Asia/Manila');
 
-date_default_timezone_set('Asia/Manila');
+    $message = '';
+    $student_info = null;
+    $attendance_recorded = false;
+    $last_action_time = '';
+    $last_action_type = '';
+    $last_status = '';
 
-$message = '';
-$student_info = null;
-$attendance_recorded = false;
-$last_action_time = '';
-$last_action_type = '';
-$last_status = '';
+    $current_datetime_str = date('Y-m-d H:i:s');
+    $current_time_str = date('H:i:s');
+    $current_date_str = date('Y-m-d');
+    $current_day_name = date('l');
+    $formatted_date = date('F j, Y');
+    $current_school_year = getCurrentSchoolYear();
 
-$current_datetime_str = date('Y-m-d H:i:s');
-$current_time_str = date('H:i:s');
-$current_date_str = date('Y-m-d');
-$current_day_name = date('l');
-$formatted_date = date('F j, Y');
-$current_school_year = getCurrentSchoolYear();
-
-$time_settings = getTimeSettings($pdo);
-
-$morning_start = $time_settings['morning_start'];
-$morning_end = $time_settings['morning_end'];
-$morning_late_threshold = $time_settings['morning_late_threshold'];
-$afternoon_start = $time_settings['afternoon_start'];
-$afternoon_end = $time_settings['afternoon_end'];
-
-$morning_start_display = date('h:i A', strtotime($morning_start));
-$morning_end_display = date('h:i A', strtotime($morning_end));
-$afternoon_start_display = date('h:i A', strtotime($afternoon_start));
-$afternoon_end_display = date('h:i A', strtotime($afternoon_end));
-
-$is_day_allowed = isAttendanceAllowedToday($time_settings);
-$is_morning_session = ($current_time_str >= $morning_start && $current_time_str <= $morning_end);
-$is_afternoon_session = ($current_time_str >= $afternoon_start && $current_time_str <= $afternoon_end);
-$system_active = ($is_morning_session || $is_afternoon_session) && $is_day_allowed;
-
-
-// Handle RFID Scan (POST request)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
-    $rfid_uid = trim($_POST['rfid_uid']);
-
-    // Server-side validation is crucial
-    if (!$is_day_allowed) {
-        $message = '<div class="alert error">Attendance is not allowed on ' . $current_day_name . '.</div>';
-    } elseif (!$system_active) {
-        $message = '<div class="alert error">The attendance system is currently inactive. Please scan during active hours.</div>';
-    } elseif (empty($rfid_uid)) {
-        $message = '<div class="alert error">Please scan an RFID card.</div>';
-    } else {
-        // Look up student by RFID
-        $stmt = $pdo->prepare("
-            SELECT s.*, r.rfid_number, e.enrollment_id, e.grade_level, e.section_id, e.school_year,
-                   sec.section_name, 
-                   CONCAT_WS(' ', adv.firstname, adv.lastname) AS adviser_name
-            FROM students s 
-            INNER JOIN rfid r ON s.lrn = r.lrn 
-            INNER JOIN enrollments e ON s.lrn = e.lrn
-            LEFT JOIN sections sec ON e.section_id = sec.section_id
-            LEFT JOIN advisers adv ON sec.adviser_id = adv.adviser_id
-            WHERE r.rfid_number = :rfid_number AND e.school_year = :school_year
-            ORDER BY e.enrollment_id DESC LIMIT 1
-        ");
-        $stmt->execute(['rfid_number' => $rfid_uid, 'school_year' => $current_school_year]);
-        $student = $stmt->fetch();
-
-        if ($student) {
-            $student_info = $student;
-            $student_lrn = $student['lrn'];
-            $enrollment_id = $student['enrollment_id'];
-
-            if (!$enrollment_id) {
-                $message = '<div class="alert error">Student is not enrolled for the current school year (' . $current_school_year . ').</div>';
-            } else {
-                // Fetch guardian's contact number (assuming one guardian per student)
-                $stmt_guardian = $pdo->prepare("SELECT contact_number FROM guardians WHERE lrn = :lrn LIMIT 1");
-                $stmt_guardian->execute(['lrn' => $student_lrn]);
-                $guardian = $stmt_guardian->fetch();
-                $parent_phone = $guardian ? $guardian['contact_number'] : null;
-
-                // Check for today's attendance record
-                $stmt_check = $pdo->prepare("SELECT * FROM attendance WHERE lrn = :lrn AND enrollment_id = :enrollment_id AND date = :current_date");
-                $stmt_check->execute(['lrn' => $student_lrn, 'enrollment_id' => $enrollment_id, 'current_date' => $current_date_str]);
-                $todays_record = $stmt_check->fetch();
-
-                if ($is_morning_session) { // --- TIME IN ---
-                    if ($todays_record) {
-                        $message = '<div class="alert info">' . htmlspecialchars($student['firstname'] . ' ' . $student['lastname']) . ' has already timed in today.</div>';
-                    } else {
-                        $status = ($current_time_str < $morning_late_threshold) ? 'present' : 'late';
-                        $stmt_insert = $pdo->prepare("INSERT INTO attendance (lrn, enrollment_id, date, time_in, status) VALUES (:lrn, :enrollment_id, :date, :time_in, :status)");
-                        
-                        if ($stmt_insert->execute(['lrn' => $student_lrn, 'enrollment_id' => $enrollment_id, 'date' => $current_date_str, 'time_in' => $current_datetime_str, 'status' => $status])) {
-                            // Send SMS for Time In
-                            $studentFullName = $student['firstname'] . ' ' . $student['lastname'];
-                            $formattedTime = date('h:i A', strtotime($current_datetime_str));
-                            sendSMS($studentFullName, 'Time In', $formattedTime, $parent_phone);
-                            
-                            $message = '<div class="alert success">Time In: ' . htmlspecialchars($student['firstname']) . '. Status: ' . ucfirst($status) . '.</div>';
-                            $attendance_recorded = true;
-                            $last_action_time = $current_datetime_str;
-                            $last_action_type = "Time In";
-                            $last_status = $status;
-                        } else {
-                            $message = '<div class="alert error">Error recording Time In.</div>';
-                        }
-                    }
-                } elseif ($is_afternoon_session) { // --- TIME OUT ---
-                    if (!$todays_record) {
-                        $message = '<div class="alert error">Cannot Time Out. ' . htmlspecialchars($student['firstname']) . ' did not time in this morning.</div>';
-                    } elseif ($todays_record['time_out'] !== null) {
-                        $message = '<div class="alert info">' . htmlspecialchars($student['firstname']) . ' has already timed out today.</div>';
-                    } else {
-                        $stmt_update = $pdo->prepare("UPDATE attendance SET time_out = :time_out WHERE attendance_id = :attendance_id");
-                        if ($stmt_update->execute(['time_out' => $current_datetime_str, 'attendance_id' => $todays_record['attendance_id']])) {
-                            // Send SMS for Time Out
-                            $studentFullName = $student['firstname'] . ' ' . $student['lastname'];
-                            $formattedTime = date('h:i A', strtotime($current_datetime_str));
-                            sendSMS($studentFullName, 'Time Out', $formattedTime, $parent_phone);
-                            
-                            $message = '<div class="alert success">Time Out recorded for ' . htmlspecialchars($student['firstname']) . '.</div>';
-                            $attendance_recorded = true;
-                            $last_action_time = $current_datetime_str;
-                            $last_action_type = "Time Out";
-                        } else {
-                            $message = '<div class="alert error">Error recording Time Out.</div>';
-                        }
-                    }
-                }
-            }
-        } else {
-            $message = '<div class="alert error">RFID card not registered or student not enrolled.</div>';
-        }
+    try {
+        $time_settings = getTimeSettings($pdo);
+    } catch (Exception $e) {
+        error_log("Time settings error: " . $e->getMessage());
+        $time_settings = [
+            'morning_start' => '06:00:00',
+            'morning_end' => '09:00:00',
+            'morning_late_threshold' => '08:30:00',
+            'afternoon_start' => '16:00:00',
+            'afternoon_end' => '16:30:00',
+            'allow_mon' => 1,
+            'allow_tue' => 1,
+            'allow_wed' => 1,
+            'allow_thu' => 1,
+            'allow_fri' => 1,
+            'allow_sat' => 0,
+            'allow_sun' => 0
+        ];
+        $message = '<div class="alert error">Error loading time settings. Using defaults.</div>';
     }
 
-    // AJAX Response
-    if (isset($_POST['ajax'])) {
-        // Default profile photo
-        $default_image_path = 'img/profile.svg';
+    $morning_start = $time_settings['morning_start'];
+    $morning_end = $time_settings['morning_end'];
+    $morning_late_threshold = $time_settings['morning_late_threshold'];
+    $afternoon_start = $time_settings['afternoon_start'];
+    $afternoon_end = $time_settings['afternoon_end'];
 
-        // Determine final profile image
-        $profile_image_url = $default_image_path;
-        if (!empty($student_info['profile_image']) && file_exists('uploads/' . $student_info['profile_image'])) {
-            $profile_image_url = 'uploads/' . $student_info['profile_image'];
+    // Validate time values
+    if (empty($morning_start)) $morning_start = '06:00:00';
+    if (empty($morning_end)) $morning_end = '09:00:00';
+    if (empty($morning_late_threshold)) $morning_late_threshold = '08:30:00';
+    if (empty($afternoon_start)) $afternoon_start = '16:00:00';
+    if (empty($afternoon_end)) $afternoon_end = '16:30:00';
+
+    $morning_start_display = date('h:i A', strtotime($morning_start));
+    $morning_end_display = date('h:i A', strtotime($morning_end));
+    $afternoon_start_display = date('h:i A', strtotime($afternoon_start));
+    $afternoon_end_display = date('h:i A', strtotime($afternoon_end));
+
+    $is_day_allowed = isAttendanceAllowedToday($time_settings);
+    $is_morning_session = ($current_time_str >= $morning_start && $current_time_str <= $morning_end);
+    $is_afternoon_session = ($current_time_str >= $afternoon_start && $current_time_str <= $afternoon_end);
+    $system_active = ($is_morning_session || $is_afternoon_session) && $is_day_allowed;
+
+    // Handle RFID Scan (POST request)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
+        $rfid_uid = trim($_POST['rfid_uid']);
+
+        // Server-side validation is crucial
+        if (!$is_day_allowed) {
+            $message = '<div class="alert error">Attendance is not allowed on ' . $current_day_name . '.</div>';
+        } elseif (!$system_active) {
+            $message = '<div class="alert error">The attendance system is currently inactive. Please scan during active hours.</div>';
+        } elseif (empty($rfid_uid)) {
+            $message = '<div class="alert error">Please scan an RFID card.</div>';
+        } else {
+            try {
+                // Look up student by RFID
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        s.*, 
+                        r.rfid_number, 
+                        e.enrollment_id, 
+                        e.grade_level, 
+                        e.section_name,
+                        e.school_year,
+                        sec.section_id,
+                        sec.section_name AS section_name_from_sections,
+                        CONCAT_WS(' ', adv.firstname, adv.lastname) AS adviser_name
+                    FROM students s 
+                    INNER JOIN rfid r ON s.lrn = r.lrn 
+                    INNER JOIN enrollments e ON s.lrn = e.lrn
+                    LEFT JOIN sections sec 
+                        ON e.section_name = sec.section_name 
+                        AND e.grade_level = sec.grade_level
+                    LEFT JOIN advisers adv 
+                        ON sec.employee_id = adv.employee_id
+                    WHERE r.rfid_number = :rfid_number 
+                      AND e.school_year = :school_year
+                    ORDER BY e.enrollment_id DESC 
+                    LIMIT 1
+                ");
+                $stmt->execute(['rfid_number' => $rfid_uid, 'school_year' => $current_school_year]);
+                $student = $stmt->fetch();
+
+                if ($student) {
+                    $student_info = $student;
+                    $student_lrn = $student['lrn'];
+                    $enrollment_id = $student['enrollment_id'];
+
+                    if (!$enrollment_id) {
+                        $message = '<div class="alert error">Student is not enrolled for the current school year (' . $current_school_year . ').</div>';
+                    } else {
+                        // Fetch guardian's contact number (assuming one guardian per student)
+                        $stmt_guardian = $pdo->prepare("SELECT contact_number FROM guardians WHERE lrn = :lrn LIMIT 1");
+                        $stmt_guardian->execute(['lrn' => $student_lrn]);
+                        $guardian = $stmt_guardian->fetch();
+                        $parent_phone = $guardian ? $guardian['contact_number'] : null;
+
+                        // Check for today's attendance record
+                        $stmt_check = $pdo->prepare("
+                            SELECT * FROM attendance 
+                            WHERE lrn = :lrn 
+                              AND enrollment_id = :enrollment_id 
+                              AND date = :current_date
+                        ");
+                        $stmt_check->execute([
+                            'lrn' => $student_lrn, 
+                            'enrollment_id' => $enrollment_id, 
+                            'current_date' => $current_date_str
+                        ]);
+                        $todays_record = $stmt_check->fetch();
+
+                        if ($is_morning_session) { // --- TIME IN ---
+                            if ($todays_record) {
+                                $message = '<div class="alert info">' . htmlspecialchars($student['firstname'] . ' ' . $student['lastname']) . ' has already timed in today.</div>';
+                            } else {
+                                $status = ($current_time_str < $morning_late_threshold) ? 'present' : 'late';
+                                $stmt_insert = $pdo->prepare("
+                                    INSERT INTO attendance (lrn, enrollment_id, date, time_in, status) 
+                                    VALUES (:lrn, :enrollment_id, :date, :time_in, :status)
+                                ");
+                                
+                                if ($stmt_insert->execute([
+                                        'lrn' => $student_lrn, 
+                                        'enrollment_id' => $enrollment_id, 
+                                        'date' => $current_date_str, 
+                                        'time_in' => $current_datetime_str, 
+                                        'status' => $status
+                                    ])) {
+
+                                    // Send SMS for Time In
+                                    $studentFullName = $student['firstname'] . ' ' . $student['lastname'];
+                                    $formattedTime = date('h:i A', strtotime($current_datetime_str));
+                                    sendSMS($studentFullName, 'Time In', $formattedTime, $parent_phone);
+                                    
+                                    $message = '<div class="alert success">Time In: ' . htmlspecialchars($student['firstname']) . '. Status: ' . ucfirst($status) . '.</div>';
+                                    $attendance_recorded = true;
+                                    $last_action_time = $current_datetime_str;
+                                    $last_action_type = "Time In";
+                                    $last_status = $status;
+                                } else {
+                                    $message = '<div class="alert error">Error recording Time In.</div>';
+                                }
+                            }
+                        } elseif ($is_afternoon_session) { // --- TIME OUT ---
+                            if (!$todays_record) {
+                                $message = '<div class="alert error">Cannot Time Out. ' . htmlspecialchars($student['firstname']) . ' did not time in this morning.</div>';
+                            } elseif ($todays_record['time_out'] !== null) {
+                                $message = '<div class="alert info">' . htmlspecialchars($student['firstname']) . ' has already timed out today.</div>';
+                            } else {
+                                $stmt_update = $pdo->prepare("
+                                    UPDATE attendance 
+                                    SET time_out = :time_out 
+                                    WHERE attendance_id = :attendance_id
+                                ");
+                                if ($stmt_update->execute([
+                                        'time_out' => $current_datetime_str, 
+                                        'attendance_id' => $todays_record['attendance_id']
+                                    ])) {
+
+                                    // Send SMS for Time Out
+                                    $studentFullName = $student['firstname'] . ' ' . $student['lastname'];
+                                    $formattedTime = date('h:i A', strtotime($current_datetime_str));
+                                    sendSMS($studentFullName, 'Time Out', $formattedTime, $parent_phone);
+                                    
+                                    $message = '<div class="alert success">Time Out recorded for ' . htmlspecialchars($student['firstname']) . '.</div>';
+                                    $attendance_recorded = true;
+                                    $last_action_time = $current_datetime_str;
+                                    $last_action_type = "Time Out";
+                                } else {
+                                    $message = '<div class="alert error">Error recording Time Out.</div>';
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    $message = '<div class="alert error">RFID card not registered or student not enrolled.</div>';
+                }
+            } catch (Exception $e) {
+                error_log("RFID processing error: " . $e->getMessage());
+                $message = '<div class="alert error">A server error occurred. Please try again.</div>';
+            }
         }
 
-        $response = [
-            'message' => $message,
-            'attendance_recorded' => $attendance_recorded,
-            'student_info' => $student_info,
-            'profile_image_url' => $profile_image_url,
-            'last_action_type' => $last_action_type,
-            'last_action_time' => $last_action_time ? date("g:i:s A", strtotime($last_action_time)) : '',
-            'last_status' => $last_status,
-        ];
+        // AJAX Response
+        if (isset($_POST['ajax'])) {
+            // Default profile photo
+            $default_image_path = 'img/profile.svg';
 
-        header('Content-Type: application/json');
-        echo json_encode($response);
-        exit;
+            // Determine final profile image
+            $profile_image_url = $default_image_path;
+            if (!empty($student_info['profile_image']) && file_exists('uploads/' . $student_info['profile_image'])) {
+                $profile_image_url = 'uploads/' . $student_info['profile_image'];
+            }
+
+            $response = [
+                'message' => $message,
+                'attendance_recorded' => $attendance_recorded,
+                'student_info' => $student_info,
+                'profile_image_url' => $profile_image_url,
+                'last_action_type' => $last_action_type,
+                'last_action_time' => $last_action_time ? date("g:i:s A", strtotime($last_action_time)) : '',
+                'last_status' => $last_status,
+            ];
+
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit;
+        }
     }
 }
 ?>
@@ -345,8 +479,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
             --warning-orange: #ffc107;
             --border-color: #e2e8f0;
             --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-            --container-bg: rgba(255, 255, 255, 0.80);
-            --background-overlay: rgba(0, 0, 0, 0.45);
+            --container-bg: rgba(255, 255, 255, 0.95); /* Slightly more opaque for visibility */
+            --background-overlay: rgba(0, 0, 0, 0.55);
         }
 
         body {
@@ -396,7 +530,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
             font-size: 1.5em;
             font-weight: 700;
             margin: 0;
-            line-height: 0.1;
+            line-height: 1.2;
         }
 
         h1 .sub-heading {
@@ -404,7 +538,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
             font-size: 0.6em;
             font-weight: 500;
             color: var(--text-dark);
-            margin-top: 20px;
+            margin-top: 10px;
         }
 
         .live-datetime {
@@ -583,7 +717,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: appear 0.3s ease-out;
             display: flex;
-            flex-direction: column; /* Stack photo and details vertically */
+            flex-direction: column; /* Stack photo and details block */
             align-items: center; 
             gap: 20px; /* Space between photo and details block */
         }
@@ -624,8 +758,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
         }
 
         .modal-details p {
-            font-size: 1.1em;
-            margin: 10px 0;
+            font-size: 1.0em; /* Slightly smaller for better fit */
+            margin: 8px 0;
             color: var(--text-dark);
             display: flex;
             justify-content: space-between;
@@ -641,6 +775,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
         .modal-details p span {
             text-align: right;
             flex-grow: 1;
+            font-weight: 500;
         }
         /* --- MODAL STYLE CHANGES END HERE --- */
     </style>
@@ -654,23 +789,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
         </div>
 
         <div class="live-datetime">
-            <div class="date-display"><?php echo $current_day_name . ', ' . $formatted_date; ?></div>
+            <div class="date-display" id="currentDate"><?php echo $current_day_name . ', ' . $formatted_date; ?></div>
             <div class="time-display" id="currentTime"><?php echo date('h:i:s A'); ?></div>
         </div>
 
         <div class="system-status" id="systemStatus">
-            <span class="status-dot <?php echo $system_active ? 'active' : 'inactive'; ?>"></span>
+            <span class="status-dot <?php echo isset($system_active) ? ($system_active ? 'active' : 'inactive') : 'inactive'; ?>"></span>
             System Status: 
-            <span class="<?php echo $system_active ? 'status-present' : 'status-absent'; ?>">
-                <?php echo $system_active ? ' Active' : ' Inactive'; ?>
+            <span class="<?php echo isset($system_active) ? ($system_active ? 'status-present' : 'status-absent') : 'status-absent'; ?>">
+                <?php echo isset($system_active) ? ($system_active ? ' Active' : ' Inactive') : ' Inactive'; ?>
             </span>
         </div>
 
-        <div class="active-hours">
-            (Time In: <?php echo $morning_start_display . ' - ' . $morning_end_display; ?> |
-            Time Out: <?php echo $afternoon_start_display . ' - ' . $afternoon_end_display; ?>)
+        <div class="active-hours" id="activeHoursDisplay">
+            (Time In: <?php echo isset($morning_start_display) ? $morning_start_display : '06:00 AM'; ?> - <?php echo isset($morning_end_display) ? $morning_end_display : '09:00 AM'; ?> |
+            Time Out: <?php echo isset($afternoon_start_display) ? $afternoon_start_display : '04:00 PM'; ?> - <?php echo isset($afternoon_end_display) ? $afternoon_end_display : '04:30 PM'; ?>)
 
-            <?php if (!$is_day_allowed): ?>
+            <?php if (isset($is_day_allowed) && !$is_day_allowed): ?>
                 <br>
                 <span style="color:var(--error-red); font-weight:bold;">
                     (Attendance is disabled on <?php echo $current_day_name; ?>)
@@ -695,16 +830,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
     <script>
         // Initial PHP time settings transferred to JavaScript
         const timeSettings = {
-            morningStart: '<?php echo $morning_start; ?>',
-            morningEnd: '<?php echo $morning_end; ?>',
-            afternoonStart: '<?php echo $afternoon_start; ?>',
-            afternoonEnd: '<?php echo $afternoon_end; ?>',
-            isDayAllowed: <?php echo json_encode($is_day_allowed); ?>,
-            morningStartDisplay: '<?php echo $morning_start_display; ?>',
-            morningEndDisplay: '<?php echo $morning_end_display; ?>',
-            afternoonStartDisplay: '<?php echo $afternoon_start_display; ?>',
-            afternoonEndDisplay: '<?php echo $afternoon_end_display; ?>',
-            currentDayName: '<?php echo $current_day_name; ?>'
+            morningStart: '<?php echo isset($morning_start) ? $morning_start : "06:00:00"; ?>',
+            morningEnd: '<?php echo isset($morning_end) ? $morning_end : "09:00:00"; ?>',
+            afternoonStart: '<?php echo isset($afternoon_start) ? $afternoon_start : "16:00:00"; ?>',
+            afternoonEnd: '<?php echo isset($afternoon_end) ? $afternoon_end : "16:30:00"; ?>',
+            isDayAllowed: <?php echo isset($is_day_allowed) ? json_encode($is_day_allowed) : 'false'; ?>,
+            currentDayName: '<?php echo isset($current_day_name) ? $current_day_name : "Unknown"; ?>'
+        };
+        
+        // Store display strings (which are based on PHP initial load)
+        let displayStrings = {
+            morningStartDisplay: '<?php echo isset($morning_start_display) ? $morning_start_display : "06:00 AM"; ?>',
+            morningEndDisplay: '<?php echo isset($morning_end_display) ? $morning_end_display : "09:00 AM"; ?>',
+            afternoonStartDisplay: '<?php echo isset($afternoon_start_display) ? $afternoon_start_display : "04:00 PM"; ?>',
+            afternoonEndDisplay: '<?php echo isset($afternoon_end_display) ? $afternoon_end_display : "04:30 PM"; ?>'
         };
 
         function getCurrentTimeStr() {
@@ -721,13 +860,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
 
         function updateDynamicElements() {
             // Live Clock
+            const now = new Date();
             document.getElementById('currentTime').textContent =
-                new Date().toLocaleTimeString('en-US', {
+                now.toLocaleTimeString('en-US', {
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit',
                     hour12: true
                 });
+            
+            // Update Date if necessary (though it rarely changes)
+            document.getElementById('currentDate').textContent =
+                now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
 
             // System Status
             const active = isSystemActive();
@@ -738,9 +883,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
             statusText.className = active ? 'status-present' : 'status-absent';
             statusText.textContent = active ? ' Active' : ' Inactive';
 
-            // Active hours text
-            const activeHoursDiv = document.querySelector('.active-hours');
-            let hoursHTML = `(Time In: ${timeSettings.morningStartDisplay} - ${timeSettings.morningEndDisplay} | Time Out: ${timeSettings.afternoonStartDisplay} - ${timeSettings.afternoonEndDisplay})`;
+            // Active hours text (Uses potentially updated displayStrings)
+            const activeHoursDiv = document.getElementById('activeHoursDisplay');
+            let hoursHTML = `(Time In: ${displayStrings.morningStartDisplay} - ${displayStrings.morningEndDisplay} | Time Out: ${displayStrings.afternoonStartDisplay} - ${displayStrings.afternoonEndDisplay})`;
 
             if (!timeSettings.isDayAllowed) {
                 hoursHTML += `<br><span style="color:var(--error-red); font-weight:bold;">(Attendance is disabled on ${timeSettings.currentDayName})</span>`;
@@ -751,21 +896,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
 
         async function pollForSettings() {
             try {
-                const response = await fetch('?action=get_status');
+                // Fetch status/settings via AJAX endpoint
+                const response = await fetch('?action=get_status', { cache: 'no-store' });
                 if (!response.ok) return;
 
                 const data = await response.json();
+                
+                // Update time boundaries based on new settings
                 Object.assign(timeSettings, {
-                    ...data.settings,
+                    morningStart: data.settings.morningStart,
+                    morningEnd: data.settings.morningEnd,
+                    afternoonStart: data.settings.afternoonStart,
+                    afternoonEnd: data.settings.afternoonEnd,
                     isDayAllowed: data.is_day_allowed,
-                    currentDayName: data.current_day_name,
-                    morningStartDisplay: data.display.morning_start_display,
-                    morningEndDisplay: data.display.morning_end_display,
-                    afternoonStartDisplay: data.display.afternoon_start_display,
-                    afternoonEndDisplay: data.display.afternoon_end_display
+                    currentDayName: data.current_day_name
                 });
+                
+                // Update display strings for the UI (for non-polling elements like active_hours)
+                Object.assign(displayStrings, data.display);
+                
             } catch (e) {
-                console.error("Polling error:", e);
+                console.error("Polling for settings failed:", e);
             }
         }
 
@@ -792,21 +943,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
                     document.getElementById('messageArea').innerHTML = data.message;
 
                     if (data.attendance_recorded) {
+                        // --- MODAL POPUP LOGIC ---
+                        const student = data.student_info;
+                        const statusClass = data.last_status ? `status-${data.last_status.toLowerCase()}` : '';
+                        const statusText = data.last_status ? data.last_status.charAt(0).toUpperCase() + data.last_status.slice(1) : '';
+                        
+                        const section = student.grade_level + ' - ' + (student.section_name || student.section_name_from_sections || 'N/A');
+                        
                         const modalContent = `
                             <img src="${data.profile_image_url}" alt="Profile Picture" class="modal-profile-pic">
                             <div class="modal-details">
                                 <h3>Student Details</h3>
-                                <p><strong>Name:</strong> <span>${data.student_info.firstname} ${data.student_info.lastname}</span></p>
-                                <p><strong>LRN:</strong> <span>${data.student_info.lrn}</span></p>
+                                <p><strong>Name:</strong> <span>${student.firstname} ${student.lastname}</span></p>
+                                <p><strong>LRN:</strong> <span>${student.lrn}</span></p>
                                 <p><strong>Grade & Section:</strong> 
-                                    <span>${data.student_info.grade_level} - ${data.student_info.section_name || 'N/A'}</span>
+                                    <span>${section}</span>
                                 </p>
                                 <p><strong>Action:</strong> <span>${data.last_action_type}</span></p>
                                 <p><strong>Time:</strong> <span>${data.last_action_time}</span></p>
                                 ${data.last_action_type === 'Time In'
                                     ? `<p><strong>Status:</strong> 
-                                            <span class="status-${data.last_status.toLowerCase()}">
-                                                ${data.last_status.charAt(0).toUpperCase() + data.last_status.slice(1)}
+                                            <span class="${statusClass}">
+                                                ${statusText}
                                             </span>
                                        </p>`
                                     : ''}
@@ -815,6 +973,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
                         document.getElementById('scanModalContent').innerHTML = modalContent;
                         document.getElementById('scanModal').style.display = 'flex';
 
+                        // Hide modal after 3.5 seconds
                         setTimeout(() => {
                             document.getElementById('scanModal').style.display = 'none';
                         }, 3500);
@@ -835,8 +994,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rfid_uid'])) {
             updateDynamicElements();
             pollForSettings();
 
-            setInterval(updateDynamicElements, 1000);
-            setInterval(pollForSettings, 3000);
+            setInterval(updateDynamicElements, 1000); // Update clock/status every second
+            setInterval(pollForSettings, 3000);      // Check for time setting changes every 3 seconds
         });
     </script>
 </body>

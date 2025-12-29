@@ -413,10 +413,13 @@ $sections_result = $conn->query($sections_query);
           box-shadow: 0 12px 30px rgba(15,23,42,0.08);
       }
       .table-responsive-custom { overflow-x: auto; }
+      
+      /* Updated Table Styles for Grid Lines */
       .custom-table {
           width: 100%;
           border-collapse: collapse;
           font-size: 0.95rem;
+          border: 1px solid #e5e7eb; /* Outer border */
       }
       .custom-table thead th {
           text-align: left;
@@ -426,19 +429,20 @@ $sections_result = $conn->query($sections_query);
           letter-spacing: 0.08em;
           color: #4b5563;
           padding: 0.75rem 1rem;
-          border-bottom: 1px solid #e5e7eb;
           background-color: #f9fafb;
+          border: 1px solid #e5e7eb; /* Header borders */
       }
       .custom-table tbody td {
           padding: 0.85rem 1rem;
-          border-bottom: 1px solid #f1f5f9;
           vertical-align: middle;
+          border: 1px solid #e5e7eb; /* Cell borders */
       }
+      
       .custom-table tbody tr:hover { background: rgba(59,130,246,0.06); }
       .actions-cell {
           display: flex;
           gap: 0.5rem;
-          justify-content: flex-end;
+          justify-content: center; /* Centered actions */
           min-width: 80px;
       }
       .action-icon-btn {
@@ -554,7 +558,7 @@ $sections_result = $conn->query($sections_query);
                       <th class="px-3 py-2">Section Name</th>
                       <th class="px-3 py-2">Grade Level</th>
                       <th class="px-3 py-2">Adviser</th>
-                      <th class="px-3 py-2 text-end">Actions</th>
+                      <th class="px-3 py-2 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -863,3 +867,4 @@ $sections_result = $conn->query($sections_query);
     </script>
   </body>
 </html>
+<?php include 'footer.php'; ?>

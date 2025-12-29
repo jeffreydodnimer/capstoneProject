@@ -69,15 +69,40 @@ function ensureDayColumns(PDO $pdo) {
 }
 ensureDayColumns($pdo);
 
-// Get current settings
+// Get current settings - UPDATED TO ALWAYS RETURN ARRAY
 function getTimeSettings(PDO $pdo) {
+    // Default settings to return if no data found
+    $defaultSettings = [
+        'id' => 1,
+        'morning_start' => '06:00:00',
+        'morning_end' => '09:00:00',
+        'morning_late_threshold' => '08:30:00',
+        'afternoon_start' => '16:00:00',
+        'afternoon_end' => '16:30:00',
+        'allow_mon' => 1,
+        'allow_tue' => 1,
+        'allow_wed' => 1,
+        'allow_thu' => 1,
+        'allow_fri' => 1,
+        'allow_sat' => 0,
+        'allow_sun' => 0,
+        'updated_at' => date('Y-m-d H:i:s')
+    ];
+    
     // Prefer id=1, fallback to the first row if not present
     $stmt = $pdo->query("SELECT * FROM time_settings WHERE id = 1");
     $row = $stmt->fetch();
+    
     if (!$row) {
         $stmt = $pdo->query("SELECT * FROM time_settings ORDER BY id ASC LIMIT 1");
         $row = $stmt->fetch();
     }
+    
+    // If still no row found, return default settings
+    if (!$row) {
+        return $defaultSettings;
+    }
+    
     return $row;
 }
 
