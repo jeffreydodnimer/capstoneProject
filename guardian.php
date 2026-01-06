@@ -475,6 +475,7 @@ if ($guardians_query) $guardians_query->close();
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- MODIFICATION: Replaced old styles with the ones from student_list.php -->
     <style>
       @keyframes hl {
         0% { background-color: #c8e6c9; }
@@ -483,164 +484,127 @@ if ($guardians_query) $guardians_query->close();
       .highlight {
         animation: hl 2s forwards;
       }
-      .text-danger-custom {
-        color: #dc3545;
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
+      .container-fluid { width: 100%; padding: 0; margin: 0; }
+      body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Inter', 'Segoe UI', sans-serif;
+          background: #f6f8ff;
+          color: #1a1a1a;
       }
-      .modal-content input.form-control,
-      .modal-content select.form-select {
-        border: 1px solid #ccc;
-        box-shadow: 2px 4px 8px rgba(0,0,0,0.05);
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        text-align: left;
+      .header-section {
+          width: 100%;
+          padding: 1rem 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+          gap: 15px;
+          position: relative;
       }
-      .modal-content label {
-        font-weight: 500;
-        margin-bottom: 0.25rem;
-      }
-      .modal-header {
-        background-color: #007bff;
-        color: white;
-      }
-      .modal-footer button {
-        margin-left: 10px;
-      }
-      .btn-primary {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        border-radius: 15px;
-      }
-      .btn-close-white {
-        filter: invert(1);
+      .search-container {
+          display: flex;
+          gap: 10px;
+          align-items: center;
       }
       .table-card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 1.5rem;
-        width: 100%;
-        box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+          background: #fff;
+          border-radius: 16px;
+          padding: 1.5rem;
+          width: min(100%, 1200px); /* Adjusted width */
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+          margin: 0 auto;
       }
+      .table-card h2 {
+          margin: 0 0 1.5rem;
+          font-size: 1.5rem;
+          color: #111827;
+          text-align: center;
+      }
+      /* MODIFICATION: Added max-height and overflow: auto to create a scrollable container */
       .table-responsive-custom {
-        overflow-x: auto;
+          max-height: 65vh;
+          overflow: auto;
       }
       .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.95rem;
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.95rem;
       }
+      /* MODIFICATION: Added position: sticky to keep the header fixed during scroll */
       .custom-table thead th {
-        text-align: left;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.08em;
-        color: #4b5563;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #e5e7eb;
-        background-color: #f9fafb;
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          text-align: left;
+          font-weight: 600;
+          text-transform: uppercase;
+          font-size: 0.75rem;
+          letter-spacing: 0.08em;
+          color: #4b5563;
+          padding: 0.75rem 1rem;
+          border: 1px solid #e5e7eb;
+          border-bottom: 1px solid #e5e7eb;
+          background-color: #f9fafb;
       }
       .custom-table tbody td {
-        padding: 0.85rem 1rem;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
+          padding: 0.85rem 1rem;
+          border: 1px solid #f1f5f9;
+          vertical-align: middle;
       }
-      .custom-table tbody tr:last-child td {
-        border-bottom: none;
-      }
-      .custom-table tbody tr:hover {
-        background: rgba(59,130,246,0.06);
-      }
+      .custom-table tbody tr:last-child td { border-bottom: 1px solid #f1f5f9; }
+      .custom-table tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
       .actions-cell {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: flex-end;
-        min-width: 80px;
+          display: flex;
+          gap: 0.5rem;
+          justify-content: flex-end;
+          min-width: 80px;
       }
-      /* Action Icon Buttons using Material Symbols */
       .action-icon-btn {
-        border: none;
-        background: none;
-        padding: 0;
-        margin: 0 2px;
-        cursor: pointer;
-        transition: color 0.2s ease, opacity 0.2s ease;
+          border: none;
+          background: none;
+          padding: 0;
+          margin: 0 2px;
+          cursor: pointer;
+          transition: color 0.2s ease, opacity 0.2s ease;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #6c757d;
       }
       .action-icon-btn .material-symbols-outlined {
-        font-size: 1.1em;
-        font-variation-settings:
-          'FILL' 0,
-          'wght' 400,
-          'GRAD' 0,
-          'opsz' 24;
+          font-size: 1.1em;
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
-      .action-icon-btn.edit-icon .material-symbols-outlined {
-        color: #1c74e4;
+      .action-icon-btn.edit-icon .material-symbols-outlined { color: #1c74e4; }
+      .action-icon-btn.delete-icon .material-symbols-outlined { color: #dc3545; }
+      .action-icon-btn:hover .material-symbols-outlined { opacity: 0.7; }
+      .action-icon-btn:hover {
+          background-color: #f1f5f9;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
-      .action-icon-btn.delete-icon .material-symbols-outlined {
-        color: #dc3545;
+      .action-icon-btn:focus { outline: 2px solid #1c74e4; outline-offset: 2px; }
+      .modal-content input.form-control,
+      .modal-content select.form-select {
+          border: 1px solid #ccc;
+          box-shadow: 2px 4px 8px rgba(0,0,0,0.05);
+          border-radius: 8px;
+          padding: 0.5rem 0.75rem;
+          text-align: left;
       }
-      .action-icon-btn:hover .material-symbols-outlined {
-        opacity: 0.7;
-      }
-      /* Search Box Styles */
-      .search-box {
-        position: relative;
-        display: inline-block;
-        margin-right: 10px;
-      }
-      .search-box input {
-        padding: 0.5rem 2.5rem 0.5rem 1rem;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        width: 300px;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-      }
-      .search-box input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-      }
-      .search-box .search-icon {
-        position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #6b7280;
-        pointer-events: none;
-      }
-      .clear-search {
-        position: absolute;
-        right: 2.5rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #6b7280;
-        cursor: pointer;
-        padding: 0;
-        display: none;
-      }
-      .clear-search:hover {
-        color: #374151;
-      }
-      .clear-search.show {
-        display: block;
-      }
-      /* Logo Styles */
-      .page-title-with-logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .page-logo {
-        width: 45px;
-        height: 45px;
-        object-fit: contain;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      }
+      .modal-content label { font-weight: 500; margin-bottom: 0.25rem; }
+      .clear-search { background: none; border: none; color: #6c757d; cursor: pointer; font-size: 1.2rem; padding: 0 5px; }
+      .clear-search:hover { color: #000; }
+      .page-title-with-logo { display: flex; align-items: center; gap: 12px; }
+      .page-logo { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+      .modal-header { background-color: #007bff; color: white; }
+      .btn-close-white { filter: invert(1); }
+      .text-danger-custom { color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem; }
     </style>
   </head>
   <body id="page-top">
@@ -651,45 +615,37 @@ if ($guardians_query) $guardians_query->close();
           <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
               <div class="page-title-with-logo">
-                <!-- Logo/Photo - Replace with your actual logo path -->
                 <img src="img/depedlogo.jpg" alt="Guardian Logo" class="page-logo">
                 <h2 class="h3 mb-0 text-gray-800">Guardians Dashboard</h2>
               </div>
-              <div class="d-flex align-items-center">
-                <!-- Search Box -->
-                <div class="search-box">
-                  <input type="text" id="searchGuardian" placeholder="Search Guardian" autocomplete="off">
-                  <button type="button" class="clear-search" id="clearSearch" title="Clear search">
-                    <span class="material-symbols-outlined">close</span>
+              <div class="search-container">
+                  <div class="input-group" style="width: 300px; position: relative;">
+                      <input type="text" id="searchGuardian" class="form-control" placeholder="Search Guardian...">
+                      <button class="clear-search" id="clearSearch" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display:none; z-index: 3;">×</button>
+                  </div>
+                  <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px;">
+                      <span class="material-symbols-outlined" style="vertical-align: middle;">upload_file</span> Import CSV
                   </button>
-                  <span class="search-icon">
-                    <span class="material-symbols-outlined">search</span>
-                  </span>
-                </div>
-                <!-- Import CSV Button -->
-                <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                  <span class="material-symbols-outlined">upload_file</span> Import CSV
-                </button>
-                <!-- Add Guardian Button -->
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                  <span class="material-symbols-outlined">person_add</span> Add Guardian
-                </button>
+                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px;">
+                      <span class="material-symbols-outlined" style="vertical-align: middle;">person_add</span> Add Guardian
+                  </button>
               </div>
             </div>
             <div class="table-card">
               <div class="table-responsive-custom">
+                <!-- MODIFICATION: Removed inline Tailwind classes from table elements -->
                 <table class="custom-table">
-                  <thead class="bg-gray-200 font-semibold">
+                  <thead>
                     <tr>
-                      <th class="border px-3 py-2">#</th>
-                      <th class="border px-3 py-2">LRN</th>
-                      <th class="border px-3 py-2">Lastname</th>
-                      <th class="border px-3 py-2">Firstname</th>
-                      <th class="border px-3 py-2">Middlename</th>
-                      <th class="border px-3 py-2">Suffix</th>
-                      <th class="border px-3 py-2">Contact</th>
-                      <th class="border px-3 py-2">Relationship</th>
-                      <th class="border px-3 py-2 text-end">Actions</th>
+                      <th style="width: 5%;">#</th>
+                      <th style="width: 15%;">LRN</th>
+                      <th style="width: 15%;">Lastname</th>
+                      <th style="width: 15%;">Firstname</th>
+                      <th style="width: 15%;">Middlename</th>
+                      <th style="width: 5%;">Suffix</th>
+                      <th style="width: 10%;">Contact</th>
+                      <th style="width: 10%;">Relationship</th>
+                      <th style="width: 10%; text-align:right;">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -698,26 +654,24 @@ if ($guardians_query) $guardians_query->close();
                     if ($guardians && $guardians->num_rows > 0):
                         while ($g = $guardians->fetch_assoc()):
                             $row_class = '';
-                            if (isset($_GET['status']) && $_GET['status'] === 'added' && $g['lrn'] == $_GET['lrn']) {
+                            if (isset($_GET['status']) && in_array($_GET['status'], ['added', 'updated']) && isset($_GET['lrn']) && $g['lrn'] == $_GET['lrn']) {
                                 $row_class = 'highlight';
                             }
                     ?>
-                      <tr class="hover:bg-gray-50 <?= $row_class ?>">
-                        <td class="border px-3 py-2"><?= $counter++ ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['lrn'] ?? '') ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['lastname'] ?? '') ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['firstname'] ?? '') ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['middlename'] ?? '') ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['suffix'] ?? '') ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['contact'] ?? '') ?></td>
-                        <td class="border px-3 py-2"><?= htmlspecialchars($g['relationship_to_student'] ?? '') ?></td>
-                        <td class="border px-3 py-2 actions-cell">
-                          <!-- Edit Button using Material Symbols -->
+                      <tr class="<?= $row_class ?>">
+                        <td><?= $counter++ ?></td>
+                        <td><?= htmlspecialchars($g['lrn'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($g['lastname'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($g['firstname'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($g['middlename'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($g['suffix'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($g['contact'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($g['relationship_to_student'] ?? '') ?></td>
+                        <td class="actions-cell">
                           <button onclick='openEditModal(<?= json_encode($g) ?>)' class="action-icon-btn edit-icon" title="Edit Guardian">
                             <span class="material-symbols-outlined">edit</span>
                           </button>
-                          <!-- Delete Form using Material Symbols -->
-                          <form method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete <?= htmlspecialchars($g['firstname'] . ' ' . $g['lastname']) ?>?');">
+                          <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete <?= htmlspecialchars($g['firstname'] . ' ' . $g['lastname']) ?>?');">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             <input type="hidden" name="guardian_id" value="<?= htmlspecialchars($g['guardian_id'] ?? '') ?>">
                             <button type="submit" name="delete_guardian" class="action-icon-btn delete-icon" title="Delete Guardian">
@@ -729,7 +683,7 @@ if ($guardians_query) $guardians_query->close();
                     <?php endwhile; ?>
                     <?php else: ?>
                       <tr>
-                        <td colspan="9" class="border px-3 py-2 text-center text-gray-500">No guardians found.</td>
+                        <td colspan="9" class="text-center text-muted py-4">No guardians found.</td>
                       </tr>
                     <?php endif; ?>
                   </tbody>
@@ -1032,48 +986,17 @@ if ($guardians_query) $guardians_query->close();
         // ========== SEARCH FUNCTIONALITY ==========
         const searchInput = $('#searchGuardian');
         const clearBtn = $('#clearSearch');
-        const tableRows = $('.custom-table tbody tr');
-        // Real-time search
-        searchInput.on('input', function() {
-          const searchTerm = $(this).val().toLowerCase().trim();
-          if (searchTerm.length > 0) {
-            clearBtn.addClass('show');
-          } else {
-            clearBtn.removeClass('show');
-          }
-          let visibleCount = 0;
-          tableRows.each(function() {
-            const row = $(this);
-            const rowText = row.text().toLowerCase();
-            if (rowText.includes(searchTerm)) {
-              row.show();
-              visibleCount++;
-            } else {
-              row.hide();
-            }
-          });
-          if (visibleCount === 0 && searchTerm.length > 0) {
-            if ($('#noResults').length === 0) {
-              $('.custom-table tbody').append(
-                '<tr id="noResults"><td colspan="9" class="border px-3 py-2 text-center text-gray-500"><span class="material-symbols-outlined" style="font-size:1.2rem;">search_off</span> No guardians found matching "' + searchTerm + '"</td></tr>'
-              );
-            }
-          } else {
-            $('#noResults').remove();
-          }
+
+        searchInput.on('keyup', function() {
+            const value = $(this).val().toLowerCase();
+            $('.custom-table tbody tr').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+            clearBtn.toggle($(this).val().length > 0);
         });
-        // Clear search
+
         clearBtn.on('click', function() {
-          searchInput.val('');
-          clearBtn.removeClass('show');
-          tableRows.show();
-          $('#noResults').remove();
-          searchInput.focus();
-        });
-        searchInput.on('keydown', function(e) {
-          if (e.key === 'Escape') {
-            clearBtn.click();
-          }
+            searchInput.val('').trigger('keyup');
         });
       });
     </script>

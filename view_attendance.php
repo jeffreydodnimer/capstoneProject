@@ -419,19 +419,24 @@ $jsonRecords = json_encode($attendanceRecords);
                 records.forEach(record => {
                     const row = document.createElement('tr');
                     
-                    const displayTimeIn = record.time_in ? 
-                        new Date('1970-01-01T' + record.time_in + 'Z').toLocaleTimeString('en-US', {
+                    // --- FIX START ---
+                    // Correctly parse the full DATETIME string from the database.
+                    // The original code was creating an invalid date string.
+                    // We replace the space with 'T' to create a format that's more reliably parsed across browsers.
+                    const displayTimeIn = record.time_in ?
+                        new Date(record.time_in.replace(' ', 'T')).toLocaleTimeString('en-US', {
                             hour: 'numeric',
                             minute: '2-digit',
                             hour12: true
                         }) : 'N/A';
-                    
-                    const displayTimeOut = record.time_out ? 
-                        new Date('1970-01-01T' + record.time_out + 'Z').toLocaleTimeString('en-US', {
+
+                    const displayTimeOut = record.time_out ?
+                        new Date(record.time_out.replace(' ', 'T')).toLocaleTimeString('en-US', {
                             hour: 'numeric',
                             minute: '2-digit',
                             hour12: true
                         }) : 'N/A';
+                    // --- FIX END ---
 
                     row.innerHTML = `
                         <td data-date="${record.date}">
@@ -449,10 +454,10 @@ $jsonRecords = json_encode($attendanceRecords);
                         <td data-adviser="${(record.adviser_name || '').toLowerCase()}">
                             ${record.adviser_name || 'N/A'}
                         </td>
-                        <td data-timein="${record.time_in}">
+                        <td data-timein="${record.time_in || ''}">
                             ${displayTimeIn}
                         </td>
-                        <td data-timeout="${record.time_out}">
+                        <td data-timeout="${record.time_out || ''}">
                             ${displayTimeOut}
                         </td>
                         <td data-status="${normalizeStatus(record.display_status)}" 

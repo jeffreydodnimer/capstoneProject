@@ -490,81 +490,138 @@ if (!$enrollments_result) {
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- MODIFICATION: Replaced old styles with new ones for scrollable table and sticky header -->
     <style>
-      /* Animation for highlighting changes */
       @keyframes hl {
         0% { background-color: #c8e6c9; }
         100% { background-color: transparent; }
       }
-      .highlight { animation: hl 2s forwards; }
-
-      /* Card styling for tables */
+      .highlight {
+        animation: hl 2s forwards;
+      }
+      .container-fluid { width: 100%; padding: 0; margin: 0; }
+      body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Inter', 'Segoe UI', sans-serif;
+          background: #f6f8ff;
+          color: #1a1a1a;
+      }
+      .header-section {
+          width: 100%;
+          padding: 1rem 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+          gap: 15px;
+          position: relative;
+      }
+      .search-container {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+      }
       .table-card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 1.5rem;
-        width: 100%;
-        box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+          background: #fff;
+          border-radius: 16px;
+          padding: 1.5rem;
+          width: min(100%, 1200px); /* Adjusted width */
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+          margin: 0 auto;
       }
-      /* Responsive table container */
-      .table-responsive-custom { overflow-x: auto; }
-      /* Custom table styling */
+      .table-card h2 {
+          margin: 0 0 1.5rem;
+          font-size: 1.5rem;
+          color: #111827;
+          text-align: center;
+      }
+      /* MODIFICATION: Added max-height and overflow: auto to create a scrollable container */
+      .table-responsive-custom {
+          max-height: 65vh;
+          overflow: auto;
+      }
       .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.95rem;
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.95rem;
       }
+      /* MODIFICATION: Added position: sticky to keep the header fixed during scroll */
       .custom-table thead th {
-        text-align: left;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.08em;
-        color: #4b5563;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #e5e7eb;
-        background-color: #f9fafb;
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          text-align: left;
+          font-weight: 600;
+          text-transform: uppercase;
+          font-size: 0.75rem;
+          letter-spacing: 0.08em;
+          color: #4b5563;
+          padding: 0.75rem 1rem;
+          border: 1px solid #e5e7eb;
+          border-bottom: 1px solid #e5e7eb;
+          background-color: #f9fafb;
       }
       .custom-table tbody td {
-        padding: 0.85rem 1rem;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
+          padding: 0.85rem 1rem;
+          border: 1px solid #f1f5f9;
+          vertical-align: middle;
       }
-      .custom-table tbody tr:hover { background: rgba(59,130,246,0.06); }
-      /* Styles for action buttons */
+      .custom-table tbody tr:last-child td { border-bottom: 1px solid #f1f5f9; }
+      .custom-table tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
       .actions-cell {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: flex-end; /* Align buttons to the right */
-        min-width: 80px; /* Ensure consistent width */
+          display: flex;
+          gap: 0.5rem;
+          justify-content: flex-end;
+          min-width: 80px;
       }
       .action-icon-btn {
-        border: none;
-        background: none;
-        padding: 0;
-        margin: 0 2px;
-        cursor: pointer;
-        transition: all 0.3s ease;
+          border: none;
+          background: none;
+          padding: 0;
+          margin: 0 2px;
+          cursor: pointer;
+          transition: color 0.2s ease, opacity 0.2s ease;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #6c757d;
       }
       .action-icon-btn .material-symbols-outlined {
-        font-size: 1.1em;
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; /* Default icon style */
+          font-size: 1.1em;
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
-      .action-icon-btn.edit-icon .material-symbols-outlined { color: #1c74e4; } /* Blue for edit */
-      .action-icon-btn.delete-icon .material-symbols-outlined { color: #dc3545; } /* Red for delete */
-      .action-icon-btn:hover .material-symbols-outlined { opacity: 0.7; } /* Hover effect */
-
-      /* Page title styling */
+      .action-icon-btn.edit-icon .material-symbols-outlined { color: #1c74e4; }
+      .action-icon-btn.delete-icon .material-symbols-outlined { color: #dc3545; }
+      .action-icon-btn:hover .material-symbols-outlined { opacity: 0.7; }
+      .action-icon-btn:hover {
+          background-color: #f1f5f9;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .action-icon-btn:focus { outline: 2px solid #1c74e4; outline-offset: 2px; }
+      .modal-content input.form-control,
+      .modal-content select.form-select {
+          border: 1px solid #ccc;
+          box-shadow: 2px 4px 8px rgba(0,0,0,0.05);
+          border-radius: 8px;
+          padding: 0.5rem 0.75rem;
+          text-align: left;
+      }
+      .modal-content label { font-weight: 500; margin-bottom: 0.25rem; }
+      .clear-search { background: none; border: none; color: #6c757d; cursor: pointer; font-size: 1.2rem; padding: 0 5px; }
+      .clear-search:hover { color: #000; }
       .page-title-with-logo { display: flex; align-items: center; gap: 12px; }
-      .page-logo {
-        width: 45px;
-        height: 45px;
-        object-fit: contain;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      }
-      /* Search box styling */
-      .search-box {
+      .page-logo { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+      .modal-header { background-color: #007bff; color: white; }
+      .btn-close-white { filter: invert(1); }
+      .text-danger-custom { color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem; }
+       /* Search box styling */
+       .search-box {
         position: relative;
         display: inline-block;
         margin-right: 10px;
@@ -626,103 +683,104 @@ if (!$enrollments_result) {
                 </div>
                 <!-- Import CSV Button -->
                 <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                  <span class="material-symbols-outlined">upload_file</span> Import CSV
+                  <span class="material-symbols-outlined" style="vertical-align: middle;">upload_file</span> Import CSV
                 </button>
                 <!-- Add Enrollment Button -->
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEnrollmentModal" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                  <span class="material-symbols-outlined">person_add</span> Add Enrollment
+                  <span class="material-symbols-outlined" style="vertical-align: middle;">person_add</span> Add Enrollment
                 </button>
               </div>
             </div>
 
             <!-- Status Alert Message -->
-<?php if (isset($_GET['status'])): ?>
-  <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <?php
-      // Display user-friendly messages based on status query parameter
-      switch ($_GET['status']) {
-        case 'added':   echo 'Enrollment added successfully!'; break;
-        case 'updated': echo 'Enrollment updated successfully!'; break;
-        case 'deleted': echo 'Enrollment deleted successfully!'; break;
-      }
-    ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-<?php endif; ?>
+            <?php if (isset($_GET['status'])): ?>
+              <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <?php
+                  // Display user-friendly messages based on status query parameter
+                  switch ($_GET['status']) {
+                    case 'added':   echo 'Enrollment added successfully!'; break;
+                    case 'updated': echo 'Enrollment updated successfully!'; break;
+                    case 'deleted': echo 'Enrollment deleted successfully!'; break;
+                  }
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            <?php endif; ?>
 
-<!-- Enrollment Table Card -->
-<div class="table-card">
-  <div class="table-responsive-custom">
-    <table class="custom-table">
-      <thead class="bg-gray-200 font-semibold">
-        <tr>
-          <th class="border px-3 py-2">No.</th>
-          <th class="border px-3 py-2">LRN</th>
-          <th class="border px-3 py-2">Student Name</th>
-          <th class="border px-3 py-2">Section</th>
-          <th class="border px-3 py-2">Grade Level</th>
-          <th class="border px-3 py-2">Adviser</th>
-          <th class="border px-3 py-2">School Year</th>
-          <th class="border px-3 py-2">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php
-        $counter = 1; // Initialize row counter
-        if ($enrollments_result->num_rows > 0):
-            // Loop through each enrollment record and display in table rows
-            while ($row = $enrollments_result->fetch_assoc()):
-                // Format student's full name for display
-                $fn = $row['student_firstname'];
-                $mn = $row['student_middlename'];
-                $ln = $row['student_lastname'];
-                $student_fullname = htmlspecialchars($ln); // Start with Last Name
-                if (!empty($fn) && $fn !== 'N/A') {
-                    $student_fullname .= ', ' . htmlspecialchars($fn); // Add First Name if available
-                }
-                if (!empty($mn)) {
-                    $student_fullname .= ' ' . htmlspecialchars(substr($mn, 0, 1)) . '.'; // Add Middle Initial
-                }
-        ?>
-                <tr class="hover:bg-gray-50">
-                  <td class="border px-3 py-2"><?= $counter++ ?></td>
-                  <td class="border px-3 py-2"><?= htmlspecialchars($row['lrn']) ?></td>
-                  <td class="border px-3 py-2"><?= $student_fullname ?></td>
-                  <td class="border px-3 py-2"><?= htmlspecialchars($row['section_name']) ?></td>
-                  <td class="border px-3 py-2"><?= htmlspecialchars($row['grade_level']) ?></td>
-                  <td class="border px-3 py-2"><?= htmlspecialchars($row['adviser_name']) ?></td>
-                  <td class="border px-3 py-2"><?= htmlspecialchars($row['school_year']) ?></td>
-                  <td class="border px-3 py-2 actions-cell">
-                    <!-- Edit Button -->
-                    <button onclick='openEditEnrollmentModal(<?= json_encode([
-                      "enrollment_id" => $row["enrollment_id"],
-                      "lrn" => $row["lrn"],
-                      "grade_level" => $row["grade_level"],
-                      "section_name" => $row["section_name"],
-                      "school_year" => $row["school_year"]
-                    ]) ?>)' class="action-icon-btn edit-icon" title="Edit Enrollment">
-                      <span class="material-symbols-outlined">edit</span>
-                    </button>
-                    <!-- Delete Form -->
-                    <form method="POST" class="inline" onsubmit="return confirm('Remove enrollment for <?= htmlspecialchars($student_fullname) ?>? This action cannot be undone.');">
-                      <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                      <input type="hidden" name="enrollment_id" value="<?= htmlspecialchars($row['enrollment_id']) ?>">
-                      <button type="submit" name="delete_enrollment" class="action-icon-btn delete-icon" title="Delete Enrollment">
-                        <span class="material-symbols-outlined">delete</span>
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-        <?php endwhile; else: ?>
-                <!-- Message if no records found -->
-                <tr>
-                  <td colspan="8" class="border px-3 py-2 text-center text-gray-500">No enrollment records found.</td>
-                </tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
+            <!-- Enrollment Table Card -->
+            <div class="table-card">
+              <div class="table-responsive-custom">
+                <!-- MODIFICATION: Removed inline Tailwind classes from table elements -->
+                <table class="custom-table">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>LRN</th>
+                      <th>Student Name</th>
+                      <th>Section</th>
+                      <th>Grade Level</th>
+                      <th>Adviser</th>
+                      <th>School Year</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php
+                    $counter = 1; // Initialize row counter
+                    if ($enrollments_result->num_rows > 0):
+                        // Loop through each enrollment record and display in table rows
+                        while ($row = $enrollments_result->fetch_assoc()):
+                            // Format student's full name for display
+                            $fn = $row['student_firstname'];
+                            $mn = $row['student_middlename'];
+                            $ln = $row['student_lastname'];
+                            $student_fullname = htmlspecialchars($ln); // Start with Last Name
+                            if (!empty($fn) && $fn !== 'N/A') {
+                                $student_fullname .= ', ' . htmlspecialchars($fn); // Add First Name if available
+                            }
+                            if (!empty($mn)) {
+                                $student_fullname .= ' ' . htmlspecialchars(substr($mn, 0, 1)) . '.'; // Add Middle Initial
+                            }
+                    ?>
+                            <tr>
+                              <td><?= $counter++ ?></td>
+                              <td><?= htmlspecialchars($row['lrn']) ?></td>
+                              <td><?= $student_fullname ?></td>
+                              <td><?= htmlspecialchars($row['section_name']) ?></td>
+                              <td><?= htmlspecialchars($row['grade_level']) ?></td>
+                              <td><?= htmlspecialchars($row['adviser_name']) ?></td>
+                              <td><?= htmlspecialchars($row['school_year']) ?></td>
+                              <td class="actions-cell">
+                                <!-- Edit Button -->
+                                <button onclick='openEditEnrollmentModal(<?= json_encode([
+                                  "enrollment_id" => $row["enrollment_id"],
+                                  "lrn" => $row["lrn"],
+                                  "grade_level" => $row["grade_level"],
+                                  "section_name" => $row["section_name"],
+                                  "school_year" => $row["school_year"]
+                                ]) ?>)' class="action-icon-btn edit-icon" title="Edit Enrollment">
+                                  <span class="material-symbols-outlined">edit</span>
+                                </button>
+                                <!-- Delete Form -->
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Remove enrollment for <?= htmlspecialchars($student_fullname) ?>? This action cannot be undone.');">
+                                  <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                  <input type="hidden" name="enrollment_id" value="<?= htmlspecialchars($row['enrollment_id']) ?>">
+                                  <button type="submit" name="delete_enrollment" class="action-icon-btn delete-icon" title="Delete Enrollment">
+                                    <span class="material-symbols-outlined">delete</span>
+                                  </button>
+                                </form>
+                              </td>
+                            </tr>
+                    <?php endwhile; else: ?>
+                            <!-- Message if no records found -->
+                            <tr>
+                              <td colspan="8" class="text-center text-muted py-4">No enrollment records found.</td>
+                            </tr>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -741,7 +799,7 @@ if (!$enrollments_result) {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Add New Enrollment</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <form method="post" id="enrollmentForm">
@@ -778,7 +836,7 @@ if (!$enrollments_result) {
                       }
                     ?>
                 </datalist>
-                <small class="text-danger" id="add_grade_level_error" style="display: none;"></small>
+                <small class="text-danger-custom" id="add_grade_level_error" style="display: none;"></small>
               </div>
 
               <div class="mb-3">
@@ -786,7 +844,7 @@ if (!$enrollments_result) {
                 <!-- Datalist for sections, populated by JavaScript -->
                 <input type="text" list="add_section_list" id="add_section_input" name="section_name" class="form-control" placeholder="Type or select section" required>
                 <datalist id="add_section_list"></datalist>
-                <small class="text-danger" id="add_section_error" style="display: none;"></small>
+                <small class="text-danger-custom" id="add_section_error" style="display: none;"></small>
               </div>
 
               <div class="mb-3">
@@ -809,7 +867,7 @@ if (!$enrollments_result) {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Edit Enrollment</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <form method="post" id="editEnrollmentForm">
@@ -842,7 +900,7 @@ if (!$enrollments_result) {
                       }
                     ?>
                 </datalist>
-                <small class="text-danger" id="edit_grade_level_error" style="display: none;"></small>
+                <small class="text-danger-custom" id="edit_grade_level_error" style="display: none;"></small>
               </div>
 
               <div class="mb-3">
@@ -850,7 +908,7 @@ if (!$enrollments_result) {
                 <!-- Datalist for sections, populated by JavaScript -->
                 <input type="text" list="edit_section_list" id="edit_section_input" name="edit_section_name" class="form-control" placeholder="Type or select section" required>
                 <datalist id="edit_section_list"></datalist>
-                <small class="text-danger" id="edit_section_error" style="display: none;"></small>
+                <small class="text-danger-custom" id="edit_section_error" style="display: none;"></small>
               </div>
 
               <div class="mb-3">
@@ -873,7 +931,7 @@ if (!$enrollments_result) {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="importModalLabel">Import Enrollments from CSV</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
@@ -1005,7 +1063,7 @@ if (!$enrollments_result) {
 
           // Display 'No results found' message if necessary
           if (visibleCount === 0 && term.length > 0 && $('#noResults').length === 0) {
-            $('.custom-table tbody').append('<tr id="noResults"><td colspan="8" class="border px-3 py-2 text-center text-gray-500"><span class="material-symbols-outlined">search_off</span> No enrollments found matching your search</td></tr>');
+            $('.custom-table tbody').append('<tr id="noResults"><td colspan="8" class="text-center text-muted py-4"><span class="material-symbols-outlined">search_off</span> No enrollments found matching your search</td></tr>');
           } else {
             $('#noResults').remove(); // Remove the message if results are found or search is cleared
           }

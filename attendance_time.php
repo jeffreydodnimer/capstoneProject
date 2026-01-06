@@ -254,25 +254,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
-/* Styles trimmed for brevity; same as your version, unchanged except minor fit-and-finish */
+/* CSS VARIABLES */
 :root {
     --primary-blue:#3b82f6; --light-blue:#dbeafe; --dark-blue:#1d4ed8; --text-dark:#1f2937;
     --text-medium:#6b7280; --text-light:#9ca3af; --success-green:#10b981; --error-red:#ef4444;
     --warning-orange:#f59e0b; --border-color:#e5e7eb; --box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
     --container-bg:#fff; --background:#f9fafb; --input-bg:#fff; --card-bg:#f8fafc;
 }
+
+/* GLOBAL STYLES */
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',system-ui,Arial,sans-serif;background:var(--background);color:var(--text-medium);line-height:1.6;min-height:100vh;padding:15px}
 .container{max-width:1200px;margin:0 auto;background:var(--container-bg);border-radius:20px;box-shadow:var(--box-shadow);overflow:hidden}
+
+/* HEADER */
 .header{background:linear-gradient(135deg,var(--primary-blue),var(--dark-blue));color:#fff;padding:30px 20px;text-align:center;position:relative}
 .header h1{font-size:2.2em;font-weight:700;margin-bottom:10px;position:relative;z-index:1}
 .header .subtitle{font-size:1em;opacity:.9;position:relative;z-index:1}
 .header .icon{font-size:2.5em;margin-bottom:15px;display:block;position:relative;z-index:1}
+
+/* CONTENT AREA */
 .content{padding:20px}
 .alert{padding:15px;margin-bottom:20px;border-radius:10px;font-weight:500;display:flex;align-items:center;box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
 .alert .icon{font-size:1.1em;margin-right:10px}
 .alert.success{background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:var(--success-green);border-left:4px solid var(--success-green)}
 .alert.error{background:linear-gradient(135deg,#fef2f2,#fee2e2);color:var(--error-red);border-left:4px solid var(--error-red)}
+
+/* CURRENT SETTINGS CARD */
 .current-settings{background:var(--card-bg);border-radius:14px;padding:20px;margin-bottom:25px;border:2px solid var(--border-color)}
 .current-settings h3{color:var(--text-dark);font-size:1.3em;font-weight:600;margin-bottom:20px;display:flex;align-items:center}
 .current-settings h3::before{content:"⚙️";margin-right:12px;font-size:1.1em}
@@ -281,6 +289,8 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;background:var(--background)
 .setting-icon{font-size:1.8em;margin-bottom:8px;color:var(--primary-blue)}
 .setting-label{font-size:.8em;color:var(--text-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .setting-value{font-size:1.2em;color:var(--text-dark);font-weight:700}
+
+/* FORM STYLES */
 .form-section{margin-bottom:30px}
 .section-header{display:flex;align-items:center;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border-color)}
 .section-icon{font-size:1.4em;margin-right:12px;color:var(--primary-blue)}
@@ -293,17 +303,66 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;background:var(--background)
 .form-group input{width:100%;padding:12px 12px 12px 40px;border:2px solid var(--border-color);border-radius:10px;background:var(--input-bg);font-size:.95em;font-weight:500;color:var(--text-dark)}
 .form-group input:focus{border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(59,130,246,.1);outline:none}
 .help-text{color:var(--text-light);font-size:.75em;margin-top:6px;font-style:italic}
-.actions{margin-top:25px;display:flex;justify-content:space-between;align-items:center;gap:15px;padding-top:20px;border-top:2px solid var(--border-color)}
-.btn{padding:12px 25px;border-radius:10px;font-size:.95em;font-weight:600;cursor:pointer;transition:all .3s;border:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-width:130px}
+
+/* BUTTONS */
+.btn{
+    padding: 8px 16px; /* Decreased padding to make smaller */
+    border-radius: 8px; /* Slightly tighter radius */
+    font-size: 0.85em; /* Smaller font size */
+    font-weight:600;
+    cursor:pointer;
+    transition:all .3s;
+    border:none;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+}
 .btn i{margin-right:8px}
-.btn-primary{background:linear-gradient(135deg,var(--primary-blue),var(--dark-blue));color:#fff;box-shadow:0 4px 12px rgba(59,130,246,.4)}
-.btn-secondary{background:#fff;color:var(--text-medium);border:2px solid var(--border-color)}
+
+.btn-primary{
+    background:linear-gradient(135deg,var(--primary-blue),var(--dark-blue));
+    color:#fff;
+    box-shadow:0 4px 12px rgba(59,130,246,.4)
+}
+.btn-primary:hover{opacity: 0.95; transform: translateY(-1px);}
+
+/* Back Button Style */
+.btn-back {
+    background: #64748b; /* Slate Gray */
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+}
+.btn-back:hover {
+    background: #475569; /* Darker Slate */
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* TOP ACTION BAR */
+.action-bar {
+    display: flex;
+    justify-content: space-between; /* Pushes Back to left, Save to right */
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+.action-bar .btn {
+    width: 200px; /* FIXED WIDTH to make both buttons same size */
+}
+
+/* OTHER ELEMENTS */
 .days-grid{display:grid;grid-template-columns:repeat(7,minmax(90px,1fr));gap:10px}
 .day-pill{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border-color);border-radius:999px;padding:8px 12px;justify-content:center}
 .status-chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.8em;font-weight:700}
 .status-on{background:#dcfce7;color:#166534;border:1px solid #86efac}
 .status-off{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
-@media (max-width:768px){.days-grid{grid-template-columns:repeat(3,1fr)}}
+
+@media (max-width:768px){
+    .days-grid{grid-template-columns:repeat(3,1fr)}
+    .action-bar { flex-direction: column; } /* Stack buttons on mobile */
+    .action-bar .btn { width: 100%; flex: 1; } /* Full width only on mobile */
+}
 </style>
 </head>
 <body>
@@ -325,6 +384,17 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;background:var(--background)
 
         <div class="content">
             <?php echo $message; ?>
+
+            <!-- ACTION BAR: Back Button + Save Button (Top) -->
+            <div class="action-bar">
+                <a href="admin_dashboard.php" class="btn btn-back">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <!-- NOTE: form="settingsForm" connects this button to the form below -->
+                <button type="submit" form="settingsForm" name="update_settings" class="btn btn-primary" id="saveBtnTop">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
 
             <div class="current-settings">
                 <h3>Current Configuration</h3>
@@ -447,25 +517,20 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;background:var(--background)
                         Uncheck Saturday/Sunday to prevent attendance on weekends. Mon–Fri are typically checked.
                     </div>
                 </div>
-
-                <div class="actions">
-                    <a href="admin_dashboard.php" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
-                    </a>
-                    <button type="submit" name="update_settings" class="btn btn-primary" id="saveBtn">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
-                </div>
             </form>
         </div>
     </div>
 
     <script>
-        // Add loading state to form submission
+        // Add loading state to form submission (Handles top button)
         document.getElementById('settingsForm').addEventListener('submit', function() {
-            const saveBtn = document.getElementById('saveBtn');
+            const saveBtnTop = document.getElementById('saveBtnTop');
             const form = document.getElementById('settingsForm');
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            // Show loading on button
+            const loadingHtml = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            if(saveBtnTop) saveBtnTop.innerHTML = loadingHtml;
+            
             form.classList.add('loading');
         });
 

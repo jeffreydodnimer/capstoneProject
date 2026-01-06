@@ -5,7 +5,7 @@ if (!isset($_SESSION['email'])) {
     exit();
 }
 
-include 'conn.php';
+include 'conn.php'; // Assuming conn.php establishes a database connection in $conn
 
 define('STUDENT_UPLOAD_DIR', __DIR__ . '/uploads/');
 if (!file_exists(STUDENT_UPLOAD_DIR)) {
@@ -401,7 +401,11 @@ body {
     text-align: center;
 }
 
-.table-responsive-custom { overflow-x: auto; }
+/* MODIFICATION: Added max-height and overflow: auto to create a scrollable container */
+.table-responsive-custom {
+    max-height: 65vh;
+    overflow: auto;
+}
 
 .custom-table {
     width: 100%;
@@ -409,7 +413,11 @@ body {
     font-size: 0.95rem;
 }
 
+/* MODIFICATION: Added position: sticky to keep the header fixed during scroll */
 .custom-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     text-align: left;
     font-weight: 600;
     text-transform: uppercase;
@@ -432,6 +440,11 @@ body {
 .custom-table tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
 
 .lrn-cell { font-weight: 600; font-size: 0.85rem; }
+
+/* NEW CSS: Ensure birthdate displays on a single line */
+.birthdate-display {
+    white-space: nowrap; /* Prevents text from wrapping to the next line */
+}
 
 .actions-cell {
     display: flex;
@@ -692,9 +705,10 @@ $(document).ready(function() {
                         if (!empty($row['birthdate'])) {
                             $parts = explode("-", $row['birthdate']);
                             if (count($parts) === 3) {
+                                // Format to MM-DD-YYYY
                                 $display_date = "{$parts[1]}-{$parts[2]}-{$parts[0]}";
                             } else {
-                                $display_date = $row['birthdate'];
+                                $display_date = $row['birthdate']; // Fallback if format is unexpected
                             }
                         }
                 ?>
@@ -713,7 +727,7 @@ $(document).ready(function() {
                         <td><?= htmlspecialchars($row['middlename'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($row['suffix'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($row['age']) ?></td>
-                        <td><?= htmlspecialchars($display_date) ?></td>
+                        <td class="birthdate-display"><?= htmlspecialchars($display_date) ?></td> <!-- Applied the new class here -->
                         <td><?= htmlspecialchars($row['sex'] ?? '-') ?></td>
                         <td class="actions-cell">
                             <button type="button" class="action-icon-btn edit-icon"

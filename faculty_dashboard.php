@@ -217,7 +217,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_faculty_stats') {
         <div class="sidebar-heading">My Class</div>
         <li class="nav-item"><a class="nav-link" href="adviserHandle.php"><i class="fas fa-users"></i><span>My Students</span></a></li>
         <li class="nav-item"><a class="nav-link" href="FacAttRecord.php"><i class="fas fa-calendar-check"></i><span>Attendance Records</span></a></li>
-        <li class="nav-item"><a class="nav-link" href="generate_sf2.php"><i class="fas fa-file-export"></i><span>Generate SF2</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="generate_sf2_faculty.php"><i class="fas fa-file-export"></i><span>Generate SF2</span></a></li>
 
         <hr class="sidebar-divider">
         <!-- NEW SOCIAL MEDIA SECTION -->
@@ -414,5 +414,6 @@ $(document).ready(function() {
     setInterval(updateStats, 5000);
 });
 </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>
