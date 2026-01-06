@@ -398,7 +398,6 @@ if ($students_result_for_dropdown) {
         width: 100%;
         box-shadow: 0 12px 30px rgba(15,23,42,0.08);
       }
-      /* MODIFICATION: Added max-height and overflow: auto to create a scrollable container */
       .table-responsive-custom {
         max-height: 65vh;
         overflow: auto;
@@ -408,7 +407,6 @@ if ($students_result_for_dropdown) {
         border-collapse: collapse;
         font-size: 0.95rem;
       }
-      /* MODIFICATION: Added position: sticky to keep the header fixed during scroll */
       .custom-table thead th {
         position: sticky;
         top: 0;
@@ -546,7 +544,6 @@ if ($students_result_for_dropdown) {
             
             <div class="table-card">
               <div class="table-responsive-custom">
-                <!-- MODIFICATION: Removed inline Tailwind classes from table elements -->
                 <table class="custom-table">
                   <thead>
                     <tr>
@@ -578,11 +575,11 @@ if ($students_result_for_dropdown) {
                         <button onclick='openEditModal(<?= json_encode(["rfid_number" => $row["rfid_number"], "lrn" => $row["lrn"]]) ?>)' class="action-icon-btn edit-icon" title="Edit RFID">
                           <span class="material-symbols-outlined">edit</span>
                         </button>
-                        <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to unlink this RFID from <?= $fullname ?>?');">
+                        <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this RFID from <?= $fullname ?>?');">
                           <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                           <input type="hidden" name="rfid_number" value="<?= htmlspecialchars($row['rfid_number'] ?? '') ?>">
-                          <button type="submit" name="unlink_rfid" class="action-icon-btn delete-icon" title="Unlink RFID">
-                            <span class="material-symbols-outlined">unlink</span>
+                          <button type="submit" name="unlink_rfid" class="action-icon-btn delete-icon" title="Delete RFID">
+                            <span class="material-symbols-outlined">delete</span>
                           </button>
                         </form>
                       </td>
@@ -654,7 +651,6 @@ if ($students_result_for_dropdown) {
           <div class="mb-3">
             <label for="edit_lrn" class="form-label">Student LRN *</label>
             <input type="text" list="studentLrnList" class="form-control" id="edit_lrn" name="edit_lrn" placeholder="Enter LRN or select student" required>
-            <!-- Datalist is reused from the add modal -->
           </div>
           <div class="text-center">
             <button type="submit" name="update_rfid" class="btn btn-primary px-4">Update RFID</button>
@@ -701,7 +697,6 @@ if ($students_result_for_dropdown) {
       $('#edit_lrn').val(rfid.lrn);
     };
 
-    // MODIFICATION: Replaced old alert system with Bootstrap alerts
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status');
     if (status) {
@@ -716,16 +711,13 @@ if ($students_result_for_dropdown) {
         if (message) {
             const alertHtml = `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
             $('#alert-placeholder').html(alertHtml);
-            // Automatically close the alert after 5 seconds
             setTimeout(() => {
                 $(".alert").alert('close');
             }, 5000);
         }
-        // Clean the URL
         window.history.replaceState({}, document.title, "link_rfid.php");
     }
 
-    // Real-time search functionality
     const searchInput = $('#searchRFID');
     const clearBtn = $('#clearSearch');
     const tableRows = $('.custom-table tbody tr');
@@ -737,7 +729,6 @@ if ($students_result_for_dropdown) {
       let visibleCount = 0;
       tableRows.each(function() {
         const row = $(this);
-        // Exclude the 'no records' row from search logic
         if (row.find('td[colspan]').length) return;
         
         const rowText = row.text().toLowerCase();
@@ -749,8 +740,8 @@ if ($students_result_for_dropdown) {
         }
       });
       
-      $('#noResults').remove(); // Remove previous 'no results' message
-      if (visibleCount === 0 && tableRows.length > 1) { // Check if there are actual data rows
+      $('#noResults').remove();
+      if (visibleCount === 0 && tableRows.length > 1) {
          $('.custom-table tbody').append('<tr id="noResults"><td colspan="5" class="text-center text-muted py-4"><span class="material-symbols-outlined" style="vertical-align: middle;">search_off</span> No records found matching your search.</td></tr>');
       }
     });
