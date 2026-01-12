@@ -40,7 +40,7 @@ function sendSMS($studentName, $actionType, $time, $phone)
     }
     
     $parameters = array(
-        'apikey' => '', // your Semaphore API key
+        'apikey' => 'f10b39b25216155081988863eb8815db', // your Semaphore API key
         'number' => $phone, 
         'message' => $message,
         'sendername' => 'RNCTLCI'

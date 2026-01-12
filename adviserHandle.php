@@ -2,7 +2,7 @@
 // my_students.php
 session_start();
 
-// ✅ Faculty access only
+//  Faculty access only
 if (!isset($_SESSION['faculty_logged_in'])) {
     header('Location: faculty_login.php');
     exit();
@@ -11,7 +11,7 @@ if (!isset($_SESSION['faculty_logged_in'])) {
 require 'conn.php';
 $conn->set_charset("utf8mb4");
 
-// ✅ Add success/error messages
+// Add success/error messages
 if (isset($_SESSION['upload_success'])) {
     $success_message = $_SESSION['upload_success'];
     unset($_SESSION['upload_success']);
@@ -22,9 +22,7 @@ if (isset($_SESSION['upload_error'])) {
     unset($_SESSION['upload_error']);
 }
 
-/* ======================================================
-   ✅ HANDLE STUDENT PHOTO UPLOAD (FACULTY)
-====================================================== */
+   //HANDLE STUDENT PHOTO UPLOAD (FACULTY)
 if (isset($_POST['upload_student_image'])) {
     $lrn = $_POST['student_lrn'] ?? '';
     
@@ -112,9 +110,9 @@ if (isset($_POST['upload_student_image'])) {
     }
 }
 
-/**
- * ✅ Get faculty information
- */
+
+ //Get faculty information
+ 
 $faculty_sql = "
     SELECT a.employee_id, CONCAT(a.firstname, ' ', a.lastname) AS faculty_name, a.photo,
     GROUP_CONCAT(DISTINCT CONCAT(s.grade_level, ' - ', s.section_name) SEPARATOR ', ') AS handled_sections
@@ -140,9 +138,9 @@ if (!file_exists($facultyPhotoPath) || empty($faculty['photo'])) {
     $facultyPhotoPath = 'img/profile.svg';
 }
 
-/**
- * ✅ Fetch students handled by this faculty member
- */
+
+ //Fetch students handled by this faculty member
+ 
 $students_query = "
     SELECT
         e.lrn, e.grade_level, e.section_name, e.school_year,
@@ -254,7 +252,7 @@ $stmt->close();
             <div class="sidebar-heading">My Class</div>
             <li class="nav-item active"><a class="nav-link" href="adviserHandle.php"><i class="fas fa-users"></i><span>My Students</span></a></li>
             <li class="nav-item"><a class="nav-link" href="FacAttRecord.php"><i class="fas fa-calendar-check"></i><span>Attendance Records</span></a></li>
-            <li class="nav-item"><a class="nav-link" href="generate_sf2.php"><i class="fas fa-file-export"></i><span>Generate SF2</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="faculty_calendar.php"><i class="fas fa-calendar"></i><span>Student Calendar</span></a></li>
             <hr class="sidebar-divider">
             <div class="sidebar-social-heading">Social Media</div>
             <li class="nav-item"><a class="nav-social-link" href="https://web.facebook.com/DepEdTayoSINHS301394.official/?_rdc=1&_rdr#" target="_blank"><i class="fab fa-facebook-f"></i><span>Facebook</span></a></li>

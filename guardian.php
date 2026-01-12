@@ -415,7 +415,7 @@ if (isset($_POST['import_guardians_csv']) && isset($_FILES['guardian_csvfile']) 
 
         $message = "✓ CSV Import Complete\nSuccessfully imported: {$rowCount} guardians\n";
         if (!empty($errors)) {
-            $message .= "\n❌ Errors (" . count($errors) . " rows failed):\n";
+            $message .= "\n Errors (" . count($errors) . " rows failed):\n";
             $message .= implode("\n", array_slice($errors, 0, 5));
             if (count($errors) > 5) {
                 $message .= "\n... and " . (count($errors) - 5) . " more errors.";
@@ -424,7 +424,7 @@ if (isset($_POST['import_guardians_csv']) && isset($_FILES['guardian_csvfile']) 
         echo "<script>alert(" . json_encode($message) . ");location='guardian.php'</script>";
         exit();
     } else {
-        echo "<script>alert('❌ Failed to open CSV file. Please check file permissions or file integrity.');location='guardian.php'</script>";
+        echo "<script>alert(' Failed to open CSV file. Please check file permissions or file integrity.');location='guardian.php'</script>";
         exit();
     }
 }

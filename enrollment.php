@@ -431,10 +431,10 @@ if (isset($_POST['import_enrollments_csv']) && isset($_FILES['enrollment_csvfile
     }
 }
 
-/**
- * Fetch enrollment records for display in the table.
- * Joins with students table to get student names and with sections/advisers to get adviser names.
- */
+
+//Fetch enrollment records for display in the table.
+ //Joins with students table to get student names and with sections/advisers to get adviser names.
+ 
 $enrollments_query = "
     SELECT
         e.enrollment_id, e.lrn, e.grade_level, e.school_year, e.section_name,

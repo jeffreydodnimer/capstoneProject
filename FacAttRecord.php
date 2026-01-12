@@ -190,7 +190,7 @@ try {
         <li class="nav-item"><a class="nav-link" href="adviserHandle.php"><i class="fas fa-users"></i><span>My Students</span></a></li>
         <li class="nav-item active"><a class="nav-link" href="FacAttRecord.php"><i class="fas fa-calendar-check"></i><span>Attendance Records</span></a></li>
         <!-- MODIFICATION: Updated link to generate_sf2.php -->
-        <li class="nav-item"><a class="nav-link" href="generate_sf2.php"><i class="fas fa-file-export"></i><span>Generate SF2</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="faculty_calendar.php"><i class="fas fa-calendar"></i><span>Student Calendar</span></a></li>
         <hr class="sidebar-divider">
         <div class="sidebar-social-heading">Social Media</div>
         <li class="nav-item"><a class="nav-social-link" href="https://web.facebook.com/DepEdTayoSINHS301394.official/?_rdc=1&_rdr#" target="_blank"><i class="fab fa-facebook-f"></i><span>Facebook</span></a></li>
